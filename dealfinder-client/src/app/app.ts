@@ -1,12 +1,54 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+
+interface ProductResult {
+  title: string;
+  price: number;
+  marketplace: string;
+  url: string;
+  score: number;
+}
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  standalone: true,
+  imports: [FormsModule, CommonModule],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class App {
-  protected readonly title = signal('dealfinder-client');
+  query = '';
+  results: ProductResult[] = [];
+  loading = false;
+  error = '';
+
+  constructor(private http: HttpClient) {}
+
+  search() {
+    if (!this.query.trim()) {
+      this.error = 'Please enter a product name.';
+      return;
+    }
+
+    this.loading = true;
+    this.error = '';
+    this.results = [];
+
+    this.http
+      .post<ProductResult[]>('http://localhost:5185/api/ProductSearch/search', {
+        query: this.query
+      })
+      .subscribe({
+        next: (data) => {
+          this.results = data;
+          this.loading = false;
+        },
+        error: () => {
+          this.error = 'Search failed. Is the backend running?';
+          this.loading = false;
+        }
+      });
+  }
 }
