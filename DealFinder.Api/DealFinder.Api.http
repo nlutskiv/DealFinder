@@ -1,0 +1,6 @@
+@DealFinder.Api_HostAddress = http://localhost:5185
+
+GET {{DealFinder.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
