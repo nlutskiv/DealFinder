@@ -9,6 +9,7 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<IProductSearchService, ProductSearchService>();
 builder.Services.AddScoped<IProductProvider, MockProductProvider>();
 builder.Services.AddScoped<IProductProvider, EbayProductProvider>();
+builder.Services.AddHttpClient<IOpenAiService, OpenAiService>();
 
 builder.Services.AddCors(options =>
 {

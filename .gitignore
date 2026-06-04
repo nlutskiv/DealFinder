@@ -3,6 +3,7 @@
 # .NET
 bin/
 obj/
+/DealFinder.Api/appsettings.Development.json
 
 
 # Compiled output

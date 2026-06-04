@@ -16,7 +16,7 @@ public class EbayProductProvider : IProductProvider
                 Price = 499.99m,
                 Marketplace = "ebay",
                 Url = "https://ebay.com",
-                Score = 8.7
+                Score = 9.9
             }
         };
     }
