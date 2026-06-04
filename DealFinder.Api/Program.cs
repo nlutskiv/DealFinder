@@ -1,10 +1,13 @@
 using DealFinder.Api.Services;
+using DealFinder.Api.Providers;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
+
 builder.Services.AddScoped<IProductSearchService, ProductSearchService>();
+builder.Services.AddScoped<IProductProvider, MockProductProvider>();
 
 builder.Services.AddCors(options =>
 {

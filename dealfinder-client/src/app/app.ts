@@ -45,7 +45,8 @@ export class App {
           this.results = data;
           this.loading = false;
         },
-        error: () => {
+        error: (err) => {
+          console.error(err);
           this.error = 'Search failed. Is the backend running?';
           this.loading = false;
         }
