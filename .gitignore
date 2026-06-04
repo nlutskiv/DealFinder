@@ -13,6 +13,7 @@ obj/
 
 # Node
 /node_modules
+/dealfinder-client/node_modules/
 npm-debug.log
 yarn-error.log
 
