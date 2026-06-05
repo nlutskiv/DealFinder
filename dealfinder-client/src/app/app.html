@@ -6,7 +6,7 @@
     <input
       type="text"
       [(ngModel)]="query"
-      placeholder="e.g. RTX 5070"
+      placeholder="e.g. RTX 3080"
       (keyup.enter)="search()"
     />
 
@@ -16,15 +16,26 @@
 
     <p class="error" *ngIf="error">{{ error }}</p>
 
+    <div class="sort-row" *ngIf="results.length > 0">
+      <label>Sort by</label>
+      <select [(ngModel)]="sortBy">
+        <option value="score">Best score</option>
+        <option value="price-low">Price: low to high</option>
+        <option value="price-high">Price: high to low</option>
+      </select>
+    </div>
+
     <div class="results" *ngIf="results.length > 0">
-      <div class="result-card" *ngFor="let product of results">
+      <div class="result-card" *ngFor="let product of sortedResults">
         <h2>{{ product.title }}</h2>
-        <p>Marketplace: {{ product.marketplace }}</p>
-        <p>Price: £{{ product.price }}</p>
-        <p>Score: {{ product.score }}</p>
-        <p><strong>Score:</strong> {{ product.score }}</p>
+
+        <p><strong>Marketplace:</strong> {{ product.marketplace }}</p>
+        <p><strong>Price:</strong> £{{ product.price }}</p>
+        <p><strong>Shipping:</strong> £{{ product.shippingPrice }}</p>
         <p><strong>Condition:</strong> {{ product.condition }}</p>
+        <p><strong>Score:</strong> {{ product.score | number:'1.0-1' }}</p>
         <p><strong>AI summary:</strong> {{ product.summary }}</p>
+
         <a [href]="product.url" target="_blank">View listing</a>
       </div>
     </div>

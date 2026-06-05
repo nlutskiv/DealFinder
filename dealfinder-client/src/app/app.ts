@@ -2,18 +2,9 @@ import { Component } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { ProductResult } from './models/product-result';
 
-interface ProductResult {
-  title: string;
-  description: string;
-  price: number;
-  shippingPrice: number;
-  condition: string;
-  marketplace: string;
-  url: string;
-  score: number;
-  summary: string;
-}
+type SortOption = 'score' | 'price-low' | 'price-high';
 
 @Component({
   selector: 'app-root',
@@ -27,8 +18,25 @@ export class App {
   results: ProductResult[] = [];
   loading = false;
   error = '';
+  sortBy: SortOption = 'score';
 
   constructor(private http: HttpClient) {}
+
+  get sortedResults(): ProductResult[] {
+    return [...this.results].sort((a, b) => {
+      switch (this.sortBy) {
+        case 'price-low':
+          return a.price - b.price;
+
+        case 'price-high':
+          return b.price - a.price;
+
+        case 'score':
+        default:
+          return b.score - a.score;
+      }
+    });
+  }
 
   search() {
     if (!this.query.trim()) {
