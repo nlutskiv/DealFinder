@@ -1,43 +1,185 @@
-<div class="container">
-  <div class="card">
-    <h1>DealFinder</h1>
+<header class="header">
+  <div class="container header-content">
 
-    <label>Product</label>
-    <input
-      type="text"
-      [(ngModel)]="query"
-      placeholder="e.g. RTX 3080"
-      (keyup.enter)="search()"
-    />
+    <a class="logo" href="#">
+      <div class="logo-icon">
+        ⚡
+      </div>
 
-    <button (click)="search()" [disabled]="loading">
-      {{ loading ? 'Searching...' : 'Search' }}
-    </button>
+      <span>DealFinder</span>
+    </a>
 
-    <p class="error" *ngIf="error">{{ error }}</p>
+    <ul class="nav-links">
+      <li><a class="nav-link active" href="#">Marketplace</a></li>
+      <li><a class="nav-link" href="#">Top Deals</a></li>
+      <li><a class="nav-link" href="#">AI Insights</a></li>
+    </ul>
 
-    <div class="sort-row" *ngIf="results.length > 0">
-      <label>Sort by</label>
-      <select [(ngModel)]="sortBy">
-        <option value="score">Best score</option>
-        <option value="price-low">Price: low to high</option>
-        <option value="price-high">Price: high to low</option>
-      </select>
+  </div>
+</header>
+
+<section class="search-section">
+  <div class="container">
+
+    <div class="search-header">
+      <h1 class="search-title">
+        AI-Powered GPU Deal Intelligence
+      </h1>
+
+      <p class="search-subtitle">
+        Find undervalued GPUs and avoid risky listings using AI analysis
+      </p>
     </div>
 
-    <div class="results" *ngIf="results.length > 0">
-      <div class="result-card" *ngFor="let product of sortedResults">
-        <h2>{{ product.title }}</h2>
+    <div class="search-controls">
 
-        <p><strong>Marketplace:</strong> {{ product.marketplace }}</p>
-        <p><strong>Price:</strong> £{{ product.price }}</p>
-        <p><strong>Shipping:</strong> £{{ product.shippingPrice }}</p>
-        <p><strong>Condition:</strong> {{ product.condition }}</p>
-        <p><strong>Score:</strong> {{ product.score | number:'1.0-1' }}</p>
-        <p><strong>AI summary:</strong> {{ product.summary }}</p>
-
-        <a [href]="product.url" target="_blank">View listing</a>
+      <div class="search-bar">
+        <input
+          class="search-input"
+          type="text"
+          [(ngModel)]="query"
+          placeholder="Search GPUs e.g. RTX 3080"
+          (keyup.enter)="search()"
+        />
       </div>
+
+      <div class="filter-dropdown">
+        <select class="filter-select" [(ngModel)]="sortBy">
+          <option value="score">Best score</option>
+          <option value="price-low">Price low-high</option>
+          <option value="price-high">Price high-low</option>
+        </select>
+      </div>
+
+      <button
+        class="view-deal-btn"
+        (click)="search()"
+        [disabled]="loading"
+      >
+        {{ loading ? 'Searching...' : 'Search' }}
+      </button>
+
+    </div>
+
+    <p class="error" *ngIf="error">
+      {{ error }}
+    </p>
+
+  </div>
+</section>
+
+<section
+  class="products-section"
+  *ngIf="results.length > 0"
+>
+  <div class="container">
+
+    <div class="section-header">
+      <h2 class="section-title">
+        GPU Listings
+      </h2>
+
+      <span class="results-count">
+        {{ sortedResults.length }} results
+      </span>
+    </div>
+
+    <div class="products-grid">
+
+      <div
+        class="product-card"
+        *ngFor="let product of sortedResults"
+      >
+
+        <div class="card-image-container">
+
+          <img
+            class="card-image"
+            src="https://images.unsplash.com/photo-1591489378430-ef2f4c626b35?q=80&w=1200&auto=format&fit=crop"
+            alt="GPU"
+          />
+
+          <div class="card-badges">
+
+            <div class="ai-score-badge">
+              AI {{ product.score | number:'1.0-0' }}
+            </div>
+
+            <div
+              class="risk-badge"
+              [ngClass]="{
+                'safe': product.score >= 80,
+                'warning': product.score >= 60 && product.score < 80,
+                'danger': product.score < 60
+              }"
+            >
+              {{
+                product.score >= 80
+                  ? 'SAFE'
+                  : product.score >= 60
+                  ? 'MEDIUM'
+                  : 'RISKY'
+              }}
+            </div>
+
+          </div>
+        </div>
+
+        <div class="card-content">
+
+          <div class="card-header">
+
+            <h3 class="product-name">
+              {{ product.title }}
+            </h3>
+
+            <p class="product-seller">
+              {{ product.marketplace }}
+            </p>
+
+          </div>
+
+          <div class="card-pricing">
+            <span class="current-price">
+              £{{ product.price }}
+            </span>
+          </div>
+
+          <div class="card-specs">
+
+            <span class="spec-tag">
+              {{ product.condition }}
+            </span>
+
+            <span class="spec-tag">
+              Shipping £{{ product.shippingPrice }}
+            </span>
+
+          </div>
+
+          <p class="ai-summary-content">
+            {{ product.summary }}
+          </p>
+
+          <div class="card-footer">
+
+            <span class="shipping-info">
+              AI evaluated listing
+            </span>
+
+            <a
+              class="view-deal-btn"
+              [href]="product.url"
+              target="_blank"
+            >
+              View Deal
+            </a>
+
+          </div>
+
+        </div>
+      </div>
+
     </div>
   </div>
-</div>
+</section>
