@@ -22,6 +22,9 @@
         <p>Marketplace: {{ product.marketplace }}</p>
         <p>Price: £{{ product.price }}</p>
         <p>Score: {{ product.score }}</p>
+        <p><strong>Score:</strong> {{ product.score }}</p>
+        <p><strong>Condition:</strong> {{ product.condition }}</p>
+        <p><strong>AI summary:</strong> {{ product.summary }}</p>
         <a [href]="product.url" target="_blank">View listing</a>
       </div>
     </div>

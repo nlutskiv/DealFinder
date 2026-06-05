@@ -12,20 +12,26 @@ public class MockProductProvider : IProductProvider
         {
             new ProductResult
             {
-                Title = $"{query} - Amazon",
-                Price = 499.99m,
-                Marketplace = "Amazon",
-                Url = "https://amazon.com",
-                Score = 8.7
+                Title = "RTX 3080 10GB MSI Gaming X Trio - used for mining but works perfectly",
+                Description = "Used for ETH mining for 1 year. Temps always good.",
+                Price = 320,
+                Marketplace = "MockBay"
             },
 
             new ProductResult
             {
-                Title = $"{query} - Ebay",
-                Price = 479.99m,
-                Marketplace = "Ebay",
-                Url = "https://ebay.com",
-                Score = 8.1
+                Title = "RTX 3080 FE faulty no display for parts",
+                Description = "Sometimes artifacts. Selling as spares or repair.",
+                Price = 120,
+                Marketplace = "MockBay"
+            },
+
+            new ProductResult
+            {
+                Title = "RTX 3080 ASUS TUF excellent condition boxed",
+                Description = "Never mined on. Gaming only.",
+                Price = 410,
+                Marketplace = "MockBay"
             }
         };
     }

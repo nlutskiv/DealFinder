@@ -11,7 +11,7 @@ builder.Services.AddScoped<IProductSearchService, ProductSearchService>();
 builder.Services.AddScoped<IProductProvider, MockProductProvider>();
 builder.Services.AddScoped<IProductProvider, EbayProductProvider>();
 builder.Services.AddScoped<IGpuPromptBuilder, GpuPromptBuilder>();
-builder.Services.AddScoped<IOpenAiService, OpenAiService>();
+builder.Services.AddHttpClient<IOpenAiService, OpenAiService>();
 
 builder.Services.AddCors(options =>
 {

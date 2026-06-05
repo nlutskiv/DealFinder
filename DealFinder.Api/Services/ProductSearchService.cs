@@ -36,11 +36,29 @@ public class ProductSearchService : IProductSearchService
 
         foreach (var product in allResults)
         {
-            var prompt = _gpuPromptBuilder.BuildEvaluationPrompt(product);
+            var prompt = _gpuPromptBuilder.BuildEvaluationPrompt(request, product);
+
+            Console.WriteLine("PROMPT:");
+            Console.WriteLine(prompt);
 
             var evaluation = await _openAiService.EvaluateGpuListingAsync(prompt);
 
-            product.Score = evaluation.ValueScore;
+            Console.WriteLine("GPT RESPONSE:");
+            Console.WriteLine(
+                $"Condition: {evaluation.Condition}, " +
+                $"Score: {evaluation.ValueScore}, " +
+                $"Reasoning: {evaluation.Reasoning}"
+            );
+
+
+
+            product.Score =
+                0.65 * evaluation.ValueScore
+                + 0.25 * evaluation.QueryMatchScore
+                - 0.10 * evaluation.RiskLevel;
+                
+            product.Summary = evaluation.Reasoning;
+            product.Condition = evaluation.Condition;
         }
 
 

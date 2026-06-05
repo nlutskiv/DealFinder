@@ -13,4 +13,5 @@ public class ProductResult
     public string Marketplace { get; set; } = "";
     public string Url { get; set; } = "";
     public double Score { get; set; }
+    public string Summary { get; set; } = "";
 }
