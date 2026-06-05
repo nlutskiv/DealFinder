@@ -1,6 +1,7 @@
 using DealFinder.Api.Services;
 using DealFinder.Api.Providers;
 using DealFinder.Api.Services.OpenAI;
+using DealFinder.Api.Services.Scoring;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +12,7 @@ builder.Services.AddScoped<IProductSearchService, ProductSearchService>();
 builder.Services.AddScoped<IProductProvider, MockProductProvider>();
 builder.Services.AddScoped<IProductProvider, EbayProductProvider>();
 builder.Services.AddScoped<IGpuPromptBuilder, GpuPromptBuilder>();
+builder.Services.AddScoped<IProductScorer, ProductScorer>();
 builder.Services.AddHttpClient<IOpenAiService, OpenAiService>();
 
 builder.Services.AddCors(options =>
