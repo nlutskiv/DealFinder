@@ -13,10 +13,10 @@ public class EbayProductProvider : IProductProvider
             new ProductResult
             {
                 Title = $"{query} - ebay",
-                Price = 499.99m,
+                Price = 455.99m,
                 Marketplace = "ebay",
                 Url = "https://ebay.com",
-                Score = 9.9
+                Score = 2
             }
         };
     }
