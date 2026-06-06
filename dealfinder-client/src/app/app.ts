@@ -20,6 +20,16 @@ export class App {
   error = '';
   sortBy: SortOption = 'score';
 
+  visibleCount = 9;
+
+  get visibleResults(): ProductResult[] {
+    return this.sortedResults.slice(0, this.visibleCount);
+  }
+
+  showMore() {
+    this.visibleCount += 9;
+  }
+
   constructor(private http: HttpClient) {}
 
   get sortedResults(): ProductResult[] {
@@ -47,6 +57,7 @@ export class App {
     this.loading = true;
     this.error = '';
     this.results = [];
+    this.visibleCount = 9;
 
     this.http
       .post<ProductResult[]>('http://localhost:5185/api/ProductSearch/search', {

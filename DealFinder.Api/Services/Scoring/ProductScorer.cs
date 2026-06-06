@@ -2,13 +2,21 @@ using DealFinder.Api.Models.OpenAI;
 
 namespace DealFinder.Api.Services.Scoring;
 
-
 public class ProductScorer : IProductScorer
 {
     public double CalculateScore(GpuEvaluationResult evaluation)
     {
-        return 0.65 * evaluation.ValueScore
-            + 0.25 * evaluation.QueryMatchScore
-            - 0.10 * evaluation.RiskLevel;
+        var positiveScore =
+            0.35 * evaluation.QueryMatchScore +
+            0.30 * evaluation.ValueScore +
+            0.20 * evaluation.ConditionScore +
+            0.15 * evaluation.SellerTrustScore;
+
+        var riskPenalty =
+            0.30 * evaluation.RiskScore;
+
+        var score = positiveScore - riskPenalty;
+
+        return Math.Clamp(score, 0, 100);
     }
 }

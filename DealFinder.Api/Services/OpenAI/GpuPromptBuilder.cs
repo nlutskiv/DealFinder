@@ -4,43 +4,59 @@ namespace DealFinder.Api.Services.OpenAI;
 
 public class GpuPromptBuilder : IGpuPromptBuilder
 {
-    public string BuildEvaluationPrompt(ProductSearchRequest request, ProductResult product)
+    public string BuildEvaluationPrompt(
+        ProductSearchRequest request,
+        ProductResult product,
+        decimal? estimatedMeanPrice
+    )
     {
-        return $@"
-You are evaluating used GPU marketplace listings.
+        var description = product.Description.Length > 400
+            ? product.Description[..400]
+            : product.Description;
 
-User search query:
-""{request.Query}""
+        var meanPriceText = estimatedMeanPrice.HasValue
+            ? $"£{estimatedMeanPrice.Value:F2}"
+            : "unknown";
 
-Listing data:
-- Title: {product.Title}
-- Description: {product.Description}
-- Price: £{product.Price}
-- Shipping: £{product.ShippingPrice}
-- Marketplace: {product.Marketplace}
-- Condition field: {product.Condition}
+        var totalPrice = product.Price + product.ShippingPrice;
 
-Evaluate:
-- Identify the most likely GPU model.
-- Extract VRAM if mentioned.
-- query_match_score: 0-100 based on how relevant this listing is to the user's search.
-- value_score: 0-100 based on value for money.
-- risk_level: 0-100 where higher means riskier.
-- Penalize faulty, broken, for parts, untested, no display, artifacting, mining, repair, spares, no returns.
-- Do not force exact matches. A different GPU can still receive a decent query_match_score if it may be relevant.
-- Be conservative if uncertain.
+        return $@"Evaluate this used GPU listing. Return only valid JSON, no markdown.
 
-Return ONLY valid JSON:
+Query: ""{request.Query}""
+Title: {product.Title}
+Description: {description}
+Total price: £{totalPrice} (item £{product.Price} + shipping £{product.ShippingPrice})
+Condition: {product.Condition}
+Seller: {product.SellerName} | feedback: {product.SellerFeedbackPercentage}% ({product.SellerFeedbackScore} reviews)
+Marketplace: {product.Marketplace}
+Mean market price: {meanPriceText}
+
+Score each factor independently (0-100):
+- query_match_score: GPU model match only. Ignore price/condition/risk.
+- condition_score: Physical/working condition evidence only. Reward: tested, benchmarked, no faults. Penalise: faulty, untested, artifacting, overheating, damaged fans/PCB.
+- seller_trust_score: Seller reliability only. Reward: high feedback, returns, warranty, receipt. Penalise: no returns, poor/missing feedback.
+- risk_score: Buyer risk only (0=none, 100=extreme). Flag: mining, no display, faults, spares/repair, vague/suspicious claims, suspiciously low price.
+- value_score: Price vs mean market price. Below mean = higher score, above mean = lower. Unknown mean = estimate cautiously. Exception: scam/extremely risky listings cap at 30.
+
+Rules:
+- Never fold multiple factors into one score.
+- Missing info lowers the relevant score.
+- Never return 0 unless genuinely terrible.
+- risk_label: ""LOW"" <25, ""MEDIUM"" 25-59, ""HIGH"" 60-79, ""CRITICAL"" 80+
 
 {{
-  ""model"": ""RTX 3080"",
-  ""vram_gb"": 10,
-  ""query_match_score"": 90,
-  ""condition"": ""good"",
-  ""risk_level"": 15,
-  ""value_score"": 82,
-  ""reasoning"": ""Strong RTX 3080 listing with realistic pricing and no obvious red flags.""
-}}
-";
+  ""model"": ""GPU model or unknown"",
+  ""vram_gb"": null,
+  ""query_match_score"": 0,
+  ""condition"": ""one phrase"",
+  ""condition_score"": 0,
+  ""seller_trust_score"": 0,
+  ""risk_score"": 0,
+  ""risk_label"": ""LOW"",
+  ""value_score"": 0,
+  ""detected_issues"": [],
+  ""positive_signals"": [],
+  ""reasoning"": ""one sentence""
+}}";
     }
 }

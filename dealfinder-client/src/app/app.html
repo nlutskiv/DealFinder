@@ -3,7 +3,7 @@
 
     <a class="logo" href="#">
       <div class="logo-icon">
-        ⚡
+        .!.
       </div>
 
       <span>DealFinder</span>
@@ -88,14 +88,14 @@
 
       <div
         class="product-card"
-        *ngFor="let product of sortedResults"
+        *ngFor="let product of visibleResults"
       >
 
         <div class="card-image-container">
 
           <img
             class="card-image"
-            src="https://images.unsplash.com/photo-1591489378430-ef2f4c626b35?q=80&w=1200&auto=format&fit=crop"
+            [src]="product.imageUrl || 'https://images.unsplash.com/photo-1591489378430-ef2f4c626b35?q=80&w=1200&auto=format&fit=crop'"
             alt="GPU"
           />
 
@@ -105,22 +105,22 @@
               AI {{ product.score | number:'1.0-0' }}
             </div>
 
-            <div
-              class="risk-badge"
-              [ngClass]="{
-                'safe': product.score >= 80,
-                'warning': product.score >= 60 && product.score < 80,
-                'danger': product.score < 60
-              }"
-            >
-              {{
-                product.score >= 80
-                  ? 'SAFE'
-                  : product.score >= 60
-                  ? 'MEDIUM'
-                  : 'RISKY'
-              }}
-            </div>
+              <div
+                class="risk-badge"
+                [ngClass]="{
+                  'safe': product.score >= 75,
+                  'warning': product.score >= 45 && product.score < 75,
+                  'danger': product.score < 45
+                }"
+              >
+                {{
+                  product.score >= 75
+                    ? 'GOOD'
+                    : product.score >= 45
+                    ? 'MEDIUM'
+                    : 'RISKY'
+                }}
+              </div>
 
           </div>
         </div>
@@ -156,10 +156,18 @@
             </span>
 
           </div>
-
-          <p class="ai-summary-content">
-            {{ product.summary }}
+          <p class="product-description">
+            {{ product.description }}
           </p>
+
+
+          <!-- <details class="ai-details">
+            <summary>View AI analysis</summary>
+                                                              GPT summary f this shite useless
+            <p class="ai-summary-content">
+              {{ product.summary }}
+            </p>
+          </details> -->
 
           <div class="card-footer">
 
@@ -180,6 +188,11 @@
         </div>
       </div>
 
+    </div>
+    <div class="load-more-row" *ngIf="visibleCount < sortedResults.length">
+      <button class="view-deal-btn" (click)="showMore()">
+        Show more
+      </button>
     </div>
   </div>
 </section>

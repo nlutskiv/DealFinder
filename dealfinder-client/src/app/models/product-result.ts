@@ -8,4 +8,5 @@ export interface ProductResult {
   url: string;
   score: number;
   summary: string;
+  imageUrl: string;
 }

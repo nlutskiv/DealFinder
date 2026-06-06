@@ -74,6 +74,8 @@ public class OpenAiService : IOpenAiService
         string modelOutput =
             parsed.choices[0].message.content;
 
+        Console.WriteLine("RAW GPT JSON:");
+        Console.WriteLine(modelOutput);
         return JsonConvert.DeserializeObject<GpuEvaluationResult>(
             modelOutput
         )!;

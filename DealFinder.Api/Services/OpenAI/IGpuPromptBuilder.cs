@@ -4,5 +4,9 @@ namespace DealFinder.Api.Services.OpenAI;
 
 public interface IGpuPromptBuilder
 {
-    string BuildEvaluationPrompt(ProductSearchRequest request, ProductResult product);
+    string BuildEvaluationPrompt(
+        ProductSearchRequest request,
+        ProductResult product,
+        decimal? estimatedMeanPrice
+    );
 }
