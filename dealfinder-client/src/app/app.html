@@ -1,11 +1,7 @@
 <header class="header">
   <div class="container header-content">
-
     <a class="logo" href="#">
-      <div class="logo-icon">
-        .!.
-      </div>
-
+      <div class="logo-icon">⌁</div>
       <span>DealFinder</span>
     </a>
 
@@ -14,69 +10,77 @@
       <li><a class="nav-link" href="#">Top Deals</a></li>
       <li><a class="nav-link" href="#">AI Insights</a></li>
     </ul>
-
   </div>
 </header>
 
 <section class="search-section">
   <div class="container">
-
     <div class="search-header">
       <h1 class="search-title">
-        AI-Powered GPU Deal Intelligence
+        AI-Powered PC Parts Deal Intelligence
       </h1>
 
       <p class="search-subtitle">
-        Find undervalued GPUs and avoid risky listings using AI analysis
+        Pick a component, compare listings, and avoid risky used hardware.
       </p>
     </div>
 
-    <div class="search-controls">
-
-      <div class="search-bar">
-        <input
-          class="search-input"
-          type="text"
-          [(ngModel)]="query"
-          placeholder="Search GPUs e.g. RTX 3080"
-          (keyup.enter)="search()"
-        />
-      </div>
-
-      <div class="filter-dropdown">
-        <select class="filter-select" [(ngModel)]="sortBy">
-          <option value="score">Best score</option>
-          <option value="price-low">Price low-high</option>
-          <option value="price-high">Price high-low</option>
-        </select>
-      </div>
-
+    <div class="category-tabs">
       <button
-        class="view-deal-btn"
-        (click)="search()"
-        [disabled]="loading"
+        class="category-tab"
+        *ngFor="let category of categories"
+        [class.active]="selectedCategory === category.key"
+        (click)="selectCategory(category.key)"
       >
-        {{ loading ? 'Searching...' : 'Search' }}
+        {{ category.label }}
       </button>
+    </div>
 
+    <div class="picker-panel">
+      <div class="picker-header">
+        <div>
+          <h2>{{ selectedCategoryLabel }} models</h2>
+          <p>Choose a product to analyze available listings.</p>
+        </div>
+
+        <div class="sort-control" *ngIf="results.length > 0">
+          <select class="filter-select" [(ngModel)]="sortBy">
+            <option value="score">Best score</option>
+            <option value="price-low">Price low-high</option>
+            <option value="price-high">Price high-low</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="model-picker">
+        <button
+          class="model-option"
+          *ngFor="let option of filteredOptions"
+          [class.active]="selectedOption?.query === option.query"
+          (click)="selectOption(option)"
+        >
+          <span class="model-name">{{ option.label }}</span>
+          <span class="model-description">{{ option.description }}</span>
+        </button>
+      </div>
     </div>
 
     <p class="error" *ngIf="error">
       {{ error }}
     </p>
 
+    <div class="loading-row" *ngIf="loading">
+      <span class="spinner"></span>
+      <span>Analyzing listings...</span>
+    </div>
   </div>
 </section>
 
-<section
-  class="products-section"
-  *ngIf="results.length > 0"
->
+<section class="products-section" *ngIf="results.length > 0">
   <div class="container">
-
     <div class="section-header">
       <h2 class="section-title">
-        GPU Listings
+        {{ selectedOption?.label }} listings
       </h2>
 
       <span class="results-count">
@@ -85,92 +89,72 @@
     </div>
 
     <div class="products-grid">
-
-      <div
-        class="product-card"
-        *ngFor="let product of visibleResults"
-      >
-
+      <div class="product-card" *ngFor="let product of sortedResults">
         <div class="card-image-container">
-
           <img
             class="card-image"
             [src]="product.imageUrl || 'https://images.unsplash.com/photo-1591489378430-ef2f4c626b35?q=80&w=1200&auto=format&fit=crop'"
-            alt="GPU"
+            alt="Product"
           />
 
           <div class="card-badges">
-
             <div class="ai-score-badge">
               AI {{ product.score | number:'1.0-0' }}
             </div>
 
-              <div
-                class="risk-badge"
-                [ngClass]="{
-                  'safe': product.score >= 75,
-                  'warning': product.score >= 45 && product.score < 75,
-                  'danger': product.score < 45
-                }"
-              >
-                {{
-                  product.score >= 75
-                    ? 'GOOD'
-                    : product.score >= 45
-                    ? 'MEDIUM'
-                    : 'RISKY'
-                }}
-              </div>
-
+            <div
+              class="risk-badge"
+              [ngClass]="{
+                'safe': product.score >= 75,
+                'warning': product.score >= 45 && product.score < 75,
+                'danger': product.score < 45
+              }"
+            >
+              {{
+                product.score >= 75
+                  ? 'GOOD'
+                  : product.score >= 45
+                  ? 'MEDIUM'
+                  : 'RISKY'
+              }}
+            </div>
           </div>
         </div>
 
         <div class="card-content">
+          <div class="card-main">
+            <div class="card-header">
+              <h3 class="product-name">
+                {{ product.title }}
+              </h3>
 
-          <div class="card-header">
+              <p class="product-seller">
+                {{ product.marketplace }}
+              </p>
+            </div>
 
-            <h3 class="product-name">
-              {{ product.title }}
-            </h3>
+            <div class="card-pricing">
+              <span class="current-price">
+                £{{ product.price }}
+              </span>
+            </div>
 
-            <p class="product-seller">
-              {{ product.marketplace }}
+            <div class="card-specs">
+              <span class="spec-tag">
+                {{ product.condition || 'unknown' }}
+              </span>
+
+              <span class="spec-tag">
+                Shipping £{{ product.shippingPrice }}
+              </span>
+            </div>
+
+            <p class="listing-description">
+              {{ product.description }}
             </p>
-
           </div>
-
-          <div class="card-pricing">
-            <span class="current-price">
-              £{{ product.price }}
-            </span>
-          </div>
-
-          <div class="card-specs">
-
-            <span class="spec-tag">
-              {{ product.condition }}
-            </span>
-
-            <span class="spec-tag">
-              Shipping £{{ product.shippingPrice }}
-            </span>
-
-          </div>
-          <p class="product-description">
-            {{ product.description }}
-          </p>
-
-
-          <!-- <details class="ai-details">
-            <summary>View AI analysis</summary>
-                                                              GPT summary f this shite useless
-            <p class="ai-summary-content">
-              {{ product.summary }}
-            </p>
-          </details> -->
 
           <div class="card-footer">
-
             <span class="shipping-info">
               AI evaluated listing
             </span>
@@ -182,17 +166,9 @@
             >
               View Deal
             </a>
-
           </div>
-
         </div>
       </div>
-
-    </div>
-    <div class="load-more-row" *ngIf="visibleCount < sortedResults.length">
-      <button class="view-deal-btn" (click)="showMore()">
-        Show more
-      </button>
     </div>
   </div>
 </section>

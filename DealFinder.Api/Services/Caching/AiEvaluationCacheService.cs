@@ -2,7 +2,9 @@ using System.Security.Cryptography;
 using System.Text;
 using DealFinder.Api.Data;
 using DealFinder.Api.Models;
+using DealFinder.Api.Models.OpenAI;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace DealFinder.Api.Services.Caching;
 
@@ -19,24 +21,24 @@ public class AiEvaluationCacheService : IAiEvaluationCacheService
         _dbContextFactory = dbContextFactory;
     }
 
-    public async Task<bool> TryApplyCachedEvaluationAsync(ProductResult product)
+    public async Task<ListingEvaluationResult?> GetFreshAnalysisAsync(ProductResult product)
     {
         if (string.IsNullOrWhiteSpace(product.Url))
         {
-            return false;
+            return null;
         }
 
         await using var dbContext =
             await _dbContextFactory.CreateDbContextAsync();
 
-        var urlHash = HashUrl(product.Url);
+        var urlHash = HashText(product.Url);
 
         var cached = await dbContext.AiEvaluationCaches
-            .FirstOrDefaultAsync(x => x.UrlHash == urlHash);
+            .FirstOrDefaultAsync(cache => cache.UrlHash == urlHash);
 
         if (cached is null)
         {
-            return false;
+            return null;
         }
 
         var isFresh =
@@ -48,19 +50,41 @@ public class AiEvaluationCacheService : IAiEvaluationCacheService
 
         if (!isFresh || !samePrice)
         {
-            return false;
+            return null;
         }
-
-        product.Score = cached.Score;
-        product.Summary = cached.Summary;
-        product.Condition = cached.Condition;
 
         Console.WriteLine($"CACHE HIT: {product.Title}");
 
-        return true;
+        return new ListingEvaluationResult
+        {
+            Model = "cached",
+            VRamGb = null,
+
+            // Query/value/final score are recalculated per search.
+            QueryMatchScore = 0,
+            ValueScore = 0,
+
+            Condition = cached.Condition,
+            ConditionScore = cached.ConditionScore,
+            SellerTrustScore = cached.SellerTrustScore,
+            RiskScore = cached.RiskScore,
+            RiskLabel = cached.RiskLabel,
+            Reasoning = cached.AnalysisSummary,
+
+            DetectedIssues =
+                JsonConvert.DeserializeObject<List<string>>(cached.DetectedIssuesJson)
+                ?? new List<string>(),
+
+            PositiveSignals =
+                JsonConvert.DeserializeObject<List<string>>(cached.PositiveSignalsJson)
+                ?? new List<string>()
+        };
     }
 
-    public async Task SaveEvaluationAsync(ProductResult product)
+    public async Task SaveAnalysisAsync(
+        ProductResult product,
+        ListingEvaluationResult evaluation
+    )
     {
         if (string.IsNullOrWhiteSpace(product.Url))
         {
@@ -70,10 +94,10 @@ public class AiEvaluationCacheService : IAiEvaluationCacheService
         await using var dbContext =
             await _dbContextFactory.CreateDbContextAsync();
 
-        var urlHash = HashUrl(product.Url);
+        var urlHash = HashText(product.Url);
 
         var existing = await dbContext.AiEvaluationCaches
-            .FirstOrDefaultAsync(x => x.UrlHash == urlHash);
+            .FirstOrDefaultAsync(cache => cache.UrlHash == urlHash);
 
         if (existing is null)
         {
@@ -84,9 +108,20 @@ public class AiEvaluationCacheService : IAiEvaluationCacheService
                 Title = product.Title,
                 Price = product.Price,
                 ShippingPrice = product.ShippingPrice,
-                Score = product.Score,
-                Summary = product.Summary,
-                Condition = product.Condition,
+
+                Condition = evaluation.Condition,
+                ConditionScore = evaluation.ConditionScore,
+                SellerTrustScore = evaluation.SellerTrustScore,
+                RiskScore = evaluation.RiskScore,
+                RiskLabel = evaluation.RiskLabel,
+
+                DetectedIssuesJson =
+                    JsonConvert.SerializeObject(evaluation.DetectedIssues),
+
+                PositiveSignalsJson =
+                    JsonConvert.SerializeObject(evaluation.PositiveSignals),
+
+                AnalysisSummary = evaluation.Reasoning,
                 CreatedAtUtc = DateTime.UtcNow
             });
         }
@@ -95,9 +130,20 @@ public class AiEvaluationCacheService : IAiEvaluationCacheService
             existing.Title = product.Title;
             existing.Price = product.Price;
             existing.ShippingPrice = product.ShippingPrice;
-            existing.Score = product.Score;
-            existing.Summary = product.Summary;
-            existing.Condition = product.Condition;
+
+            existing.Condition = evaluation.Condition;
+            existing.ConditionScore = evaluation.ConditionScore;
+            existing.SellerTrustScore = evaluation.SellerTrustScore;
+            existing.RiskScore = evaluation.RiskScore;
+            existing.RiskLabel = evaluation.RiskLabel;
+
+            existing.DetectedIssuesJson =
+                JsonConvert.SerializeObject(evaluation.DetectedIssues);
+
+            existing.PositiveSignalsJson =
+                JsonConvert.SerializeObject(evaluation.PositiveSignals);
+
+            existing.AnalysisSummary = evaluation.Reasoning;
             existing.CreatedAtUtc = DateTime.UtcNow;
         }
 
@@ -106,12 +152,12 @@ public class AiEvaluationCacheService : IAiEvaluationCacheService
         Console.WriteLine($"CACHE SAVED: {product.Title}");
     }
 
-    private static string HashUrl(string url)
+    private static string HashText(string value)
     {
-        var normalizedUrl = url.Trim().ToLowerInvariant();
+        var normalized = value.Trim().ToLowerInvariant();
 
         var bytes = SHA256.HashData(
-            Encoding.UTF8.GetBytes(normalizedUrl)
+            Encoding.UTF8.GetBytes(normalized)
         );
 
         return Convert.ToHexString(bytes);

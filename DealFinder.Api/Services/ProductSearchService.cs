@@ -180,41 +180,51 @@ public class ProductSearchService : IProductSearchService
     }
 
     private async Task EvaluateSingleProductAsync(
-        ProductSearchRequest request,
-        ProductResult product,
-        decimal? estimatedMeanPrice
+    ProductSearchRequest request,
+    ProductResult product,
+    decimal? estimatedMeanPrice
     )
     {
-        var cacheHit = await _cacheService.TryApplyCachedEvaluationAsync(product);
+        var evaluation =
+            await _cacheService.GetFreshAnalysisAsync(product);
 
-        if (cacheHit)
+        if (evaluation is null)
         {
-            return;
+            var prompt = _listingPromptBuilder.BuildEvaluationPrompt(
+                request,
+                product,
+                estimatedMeanPrice
+            );
+
+            evaluation = await _openAiService.EvaluateListingAsync(prompt);
+
+            await _cacheService.SaveAnalysisAsync(product, evaluation);
         }
 
-        var prompt = _listingPromptBuilder.BuildEvaluationPrompt(
-            request,
-            product,
-            estimatedMeanPrice
+        // Recalculate query-dependent fields every search.
+        evaluation.QueryMatchScore = QueryMatchScorer.Calculate(
+            request.Query,
+            product
         );
-
-        var evaluation = await _openAiService.EvaluateListingAsync(prompt);
+        evaluation.ValueScore = ValueScorer.Calculate(
+            product,
+            estimatedMeanPrice,
+            evaluation.RiskScore
+        );
 
         product.Score = _productScorer.CalculateScore(evaluation);
         product.Summary = evaluation.Reasoning;
         product.Condition = evaluation.Condition;
 
-        await _cacheService.SaveEvaluationAsync(product);
-
         Console.WriteLine(
-            $"Model: {evaluation.Model}, " +
+            $"Title: {product.Title}, " +
             $"Query: {evaluation.QueryMatchScore}, " +
+            $"Value: {evaluation.ValueScore}, " +
             $"ConditionScore: {evaluation.ConditionScore}, " +
             $"SellerTrust: {evaluation.SellerTrustScore}, " +
             $"Risk: {evaluation.RiskScore}, " +
-            $"Value: {evaluation.ValueScore}, " +
-            $"Final: {product.Score}, " +
-            $"Reasoning: {evaluation.Reasoning}"
+            $"Final: {product.Score}"
         );
     }
+    
 }

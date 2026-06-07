@@ -23,24 +23,42 @@ namespace DealFinder.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("AnalysisSummary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Condition")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<double>("ConditionScore")
+                        .HasColumnType("REAL");
+
                     b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DetectedIssuesJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PositiveSignalsJson")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("TEXT");
 
-                    b.Property<double>("Score")
+                    b.Property<string>("RiskLabel")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("RiskScore")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("SellerTrustScore")
                         .HasColumnType("REAL");
 
                     b.Property<decimal>("ShippingPrice")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Summary")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Title")

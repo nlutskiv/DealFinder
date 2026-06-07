@@ -2,9 +2,17 @@ import { Component } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+
 import { ProductResult } from './models/product-result';
+import { CatalogOption, ProductCategory } from './models/catalog-option';
+import { CATALOG_OPTIONS } from './data/catalog-options';
 
 type SortOption = 'score' | 'price-low' | 'price-high';
+
+interface CategoryTab {
+  key: ProductCategory;
+  label: string;
+}
 
 @Component({
   selector: 'app-root',
@@ -14,23 +22,31 @@ type SortOption = 'score' | 'price-low' | 'price-high';
   styleUrl: './app.css'
 })
 export class App {
-  query = '';
+  categories: CategoryTab[] = [
+    { key: 'gpu', label: 'GPU' },
+    { key: 'cpu', label: 'CPU' },
+    { key: 'ram', label: 'RAM' },
+    { key: 'psu', label: 'PSU' },
+    { key: 'motherboard', label: 'Motherboard' }
+  ];
+
+  selectedCategory: ProductCategory = 'gpu';
+  selectedOption: CatalogOption | null = null;
+
   results: ProductResult[] = [];
   loading = false;
   error = '';
   sortBy: SortOption = 'score';
 
-  visibleCount = 9;
-
-  get visibleResults(): ProductResult[] {
-    return this.sortedResults.slice(0, this.visibleCount);
-  }
-
-  showMore() {
-    this.visibleCount += 9;
-  }
+  catalogOptions = CATALOG_OPTIONS;
 
   constructor(private http: HttpClient) {}
+
+  get filteredOptions(): CatalogOption[] {
+    return this.catalogOptions.filter(
+      option => option.category === this.selectedCategory
+    );
+  }
 
   get sortedResults(): ProductResult[] {
     return [...this.results].sort((a, b) => {
@@ -48,27 +64,42 @@ export class App {
     });
   }
 
-  search() {
-    if (!this.query.trim()) {
-      this.error = 'Please enter a product name.';
+  get selectedCategoryLabel(): string {
+    return this.categories.find(c => c.key === this.selectedCategory)?.label ?? 'Products';
+  }
+
+  selectCategory(category: ProductCategory): void {
+    this.selectedCategory = category;
+    this.selectedOption = null;
+    this.results = [];
+    this.error = '';
+  }
+
+  selectOption(option: CatalogOption): void {
+    this.selectedOption = option;
+    this.searchSelectedOption();
+  }
+
+  searchSelectedOption(): void {
+    if (!this.selectedOption) {
+      this.error = 'Please choose a product first.';
       return;
     }
 
     this.loading = true;
     this.error = '';
     this.results = [];
-    this.visibleCount = 9;
 
     this.http
       .post<ProductResult[]>('http://localhost:5185/api/ProductSearch/search', {
-        query: this.query
+        query: this.selectedOption.query
       })
       .subscribe({
-        next: (data) => {
+        next: data => {
           this.results = data;
           this.loading = false;
         },
-        error: (err) => {
+        error: err => {
           console.error(err);
           this.error = 'Search failed. Is the backend running?';
           this.loading = false;

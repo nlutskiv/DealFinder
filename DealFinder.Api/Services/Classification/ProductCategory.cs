@@ -7,5 +7,8 @@ public static class ProductCategory
     public const string Ram = "ram";
     public const string Psu = "psu";
     public const string Motherboard = "motherboard";
+    public const string Storage = "Storage";
+    public const string Cooling = "Cooling";
     public const string Generic = "generic";
+
 }
