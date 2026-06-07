@@ -2,8 +2,10 @@ using DealFinder.Api.Services;
 using DealFinder.Api.Providers;
 using DealFinder.Api.Services.OpenAI;
 using DealFinder.Api.Services.Scoring;
-using DealFinder.Api.Services.Scoring;
 using DealFinder.Api.Services.Pricing;
+using DealFinder.Api.Data;
+using Microsoft.EntityFrameworkCore;
+using DealFinder.Api.Services.Caching;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +21,7 @@ builder.Services.AddHttpClient<IOpenAiService, OpenAiService>();
 builder.Services.AddScoped<IPriceEstimator, PriceEstimator>();
 builder.Services.AddScoped<IPreFilterScorer, PreFilterScorer>();
 builder.Services.AddScoped<IQueryIntentParser, QueryIntentParser>();
+builder.Services.AddScoped<IAiEvaluationCacheService, AiEvaluationCacheService>();
 
 builder.Services.AddCors(options =>
 {
@@ -30,6 +33,12 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod();
     });
 });
+
+builder.Services.AddDbContextFactory<DealFinderDbContext>(options =>
+    options.UseSqlite(
+        builder.Configuration.GetConnectionString("DefaultConnection")
+    )
+);
 
 var app = builder.Build();
 

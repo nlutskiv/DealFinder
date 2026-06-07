@@ -4,6 +4,7 @@ using DealFinder.Api.Services.Classification;
 using DealFinder.Api.Services.OpenAI;
 using DealFinder.Api.Services.Pricing;
 using DealFinder.Api.Services.Scoring;
+using DealFinder.Api.Services.Caching;
 
 namespace DealFinder.Api.Services;
 
@@ -19,6 +20,7 @@ public class ProductSearchService : IProductSearchService
     private readonly IPriceEstimator _priceEstimator;
     private readonly IPreFilterScorer _preFilterScorer;
     private readonly IQueryIntentParser _queryIntentParser;
+    private readonly IAiEvaluationCacheService _cacheService;
 
     public ProductSearchService(
         IEnumerable<IProductProvider> providers,
@@ -27,7 +29,8 @@ public class ProductSearchService : IProductSearchService
         IProductScorer productScorer,
         IPriceEstimator priceEstimator,
         IPreFilterScorer preFilterScorer,
-        IQueryIntentParser queryIntentParser
+        IQueryIntentParser queryIntentParser,
+        IAiEvaluationCacheService cacheService
     )
     {
         _providers = providers;
@@ -37,6 +40,7 @@ public class ProductSearchService : IProductSearchService
         _priceEstimator = priceEstimator;
         _preFilterScorer = preFilterScorer;
         _queryIntentParser = queryIntentParser;
+        _cacheService = cacheService;
     }
 
     public async Task<List<ProductResult>> SearchAsync(ProductSearchRequest request)
@@ -181,6 +185,13 @@ public class ProductSearchService : IProductSearchService
         decimal? estimatedMeanPrice
     )
     {
+        var cacheHit = await _cacheService.TryApplyCachedEvaluationAsync(product);
+
+        if (cacheHit)
+        {
+            return;
+        }
+
         var prompt = _listingPromptBuilder.BuildEvaluationPrompt(
             request,
             product,
@@ -192,6 +203,8 @@ public class ProductSearchService : IProductSearchService
         product.Score = _productScorer.CalculateScore(evaluation);
         product.Summary = evaluation.Reasoning;
         product.Condition = evaluation.Condition;
+
+        await _cacheService.SaveEvaluationAsync(product);
 
         Console.WriteLine(
             $"Model: {evaluation.Model}, " +
