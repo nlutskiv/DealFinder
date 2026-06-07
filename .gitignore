@@ -5,6 +5,13 @@ bin/
 obj/
 /DealFinder.Api/appsettings.Development.json
 
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
 
 # Compiled output
 /dist
