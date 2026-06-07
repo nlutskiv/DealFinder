@@ -18,7 +18,7 @@ public class PreFilterScorer : IPreFilterScorer
         "mining", "crypto", "ethereum", "rig", "farm",
         "noisy fan", "fan noise", "coil whine", "artifacting", "artifacts",
         "overheating", "thermal", "crashing", "crashes", "blue screen", "bsod",
-        "missing", "no box", "scratched", "marks", "worn"
+        "missing", "no box", "scratched", "marks", "worn", "bent pin", "bent pins"
     ];
 
     private static readonly string[] PositiveSignals =
@@ -56,7 +56,7 @@ public class PreFilterScorer : IPreFilterScorer
             );
         }
 
-        return ScoreWorkingGpuSearch(
+        return ScoreWorkingSearch(
             query,
             title,
             combined,
@@ -68,7 +68,7 @@ public class PreFilterScorer : IPreFilterScorer
         );
     }
 
-    private static double ScoreWorkingGpuSearch(
+    private static double ScoreWorkingSearch(
         string query,
         string title,
         string combined,
@@ -79,7 +79,6 @@ public class PreFilterScorer : IPreFilterScorer
         int hardKillHits
     )
     {
-        // Normal buyers should not see broken/repair cards ranked highly.
         if (hardKillHits > 0)
         {
             return 5.0;
@@ -108,28 +107,22 @@ public class PreFilterScorer : IPreFilterScorer
     {
         double score = 0.0;
 
-        // For parts search, model match matters most.
         score += QueryMatchScore(query, title) * 1.6;
 
-        // Broken/faulty wording is desirable here.
         if (hardKillHits > 0)
         {
             score += 25;
         }
         else
         {
-            // Working cards are usually not what "for parts" buyers want.
             score -= 20;
         }
 
-        // For parts, cheapness matters a lot.
         score += PartsPriceScore(totalPrice, meanPrice);
-
-        // Seller trust matters, but less than price/model/fault status.
         score += SellerScore(product) * 0.5;
 
-        // Penalize listings that look too premium/working for a parts search.
         var positiveHits = PositiveSignals.Count(term => combined.Contains(term));
+
         if (positiveHits >= 2 && hardKillHits == 0)
         {
             score -= 10;
@@ -140,48 +133,53 @@ public class PreFilterScorer : IPreFilterScorer
 
     private static double QueryMatchScore(string query, string title)
     {
-        var q = RemoveIntentWords(query.ToLowerInvariant().Trim());
+        var queryTokens = ExtractUsefulTokens(query);
 
-        if (string.IsNullOrWhiteSpace(q))
+        if (queryTokens.Count == 0)
         {
             return 0;
         }
 
-        if (title.Contains(q))
+        var matchCount = queryTokens.Count(token => title.Contains(token));
+
+        if (matchCount == queryTokens.Count)
         {
             return 25;
         }
 
-        var queryNumbers = Regex.Matches(q, @"\d{3,4}")
+        if (matchCount > 0)
+        {
+            return 10;
+        }
+
+        var queryNumbers = Regex.Matches(query.ToLowerInvariant(), @"\d{3,5}[a-z]*")
             .Select(match => match.Value)
             .ToList();
 
-        if (!queryNumbers.Any())
+        if (queryNumbers.Count > 0 && queryNumbers.Any(num => title.Contains(num)))
         {
-            return 0;
+            return 18;
         }
 
-        var numberMatch = queryNumbers.All(title.Contains);
+        return -15;
+    }
 
-        if (!numberMatch)
+    private static List<string> ExtractUsefulTokens(string query)
+    {
+        var stopWords = new HashSet<string>
         {
-            return -15;
-        }
+            "for", "parts", "part", "repair", "spares", "faulty", "broken",
+            "not", "working", "cheap", "budget", "deal", "used", "new",
+            "gaming", "pc", "card", "graphics", "gpu", "cpu", "processor"
+        };
 
-        var querySuffix = ExtractSuffix(q);
-        var titleSuffix = ExtractSuffix(title);
-
-        if (querySuffix != null && titleSuffix != null && querySuffix != titleSuffix)
-        {
-            return 5;
-        }
-
-        if (querySuffix != null && titleSuffix == null)
-        {
-            return 8;
-        }
-
-        return 18;
+        return query
+            .ToLowerInvariant()
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(token => token.Trim())
+            .Where(token => token.Length > 1)
+            .Where(token => !stopWords.Contains(token))
+            .ToList();
     }
 
     private static double WorkingPriceScore(decimal totalPrice, decimal? meanPrice)
@@ -195,7 +193,7 @@ public class PreFilterScorer : IPreFilterScorer
 
         return ratio switch
         {
-            < 0.50 => -10, // suspiciously cheap
+            < 0.50 => -10,
             < 0.75 => 20,
             < 0.90 => 15,
             < 1.05 => 10,
@@ -241,7 +239,6 @@ public class PreFilterScorer : IPreFilterScorer
     private static double WorkingConditionScore(string combined)
     {
         var positiveHits = PositiveSignals.Count(term => combined.Contains(term));
-
         return Math.Min(positiveHits * 4.0, 15.0);
     }
 
@@ -293,43 +290,5 @@ public class PreFilterScorer : IPreFilterScorer
         }
 
         return score;
-    }
-
-    private static string? ExtractSuffix(string text)
-    {
-        var suffixes = new[] { "xtx", "super", "ti", "xt", "gre" };
-
-        return suffixes.FirstOrDefault(suffix =>
-            Regex.IsMatch(text, $@"\b{suffix}\b")
-        );
-    }
-
-    private static string RemoveIntentWords(string query)
-    {
-        var removablePhrases = new[]
-        {
-            "for parts",
-            "parts",
-            "repair",
-            "spares",
-            "faulty",
-            "broken",
-            "not working",
-            "no display",
-            "dead",
-            "cheap",
-            "budget",
-            "deal",
-            "mining",
-            "mined",
-            "crypto"
-        };
-
-        foreach (var phrase in removablePhrases)
-        {
-            query = query.Replace(phrase, "");
-        }
-
-        return Regex.Replace(query, @"\s+", " ").Trim();
     }
 }

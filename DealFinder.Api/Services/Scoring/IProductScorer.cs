@@ -4,5 +4,5 @@ namespace DealFinder.Api.Services.Scoring;
 
 public interface IProductScorer
 {
-    double CalculateScore(GpuEvaluationResult evaluation);
+    double CalculateScore(ListingEvaluationResult evaluation);
 }

@@ -15,4 +15,5 @@ public class ProductResult
     public double Score { get; set; }
     public string Summary { get; set; } = "";
     public string ImageUrl { get; set; } = "";
+    public string Category { get; set; } = "";
 }

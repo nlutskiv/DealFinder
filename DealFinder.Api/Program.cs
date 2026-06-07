@@ -13,7 +13,7 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<IProductSearchService, ProductSearchService>();
 builder.Services.AddScoped<IProductProvider, MockProductProvider>();
 builder.Services.AddScoped<IProductProvider, EbayProductProvider>();
-builder.Services.AddScoped<IGpuPromptBuilder, GpuPromptBuilder>();
+builder.Services.AddScoped<IListingPromptBuilder, ListingPromptBuilder>();
 builder.Services.AddScoped<IProductScorer, ProductScorer>();
 builder.Services.AddHttpClient<IOpenAiService, OpenAiService>();
 builder.Services.AddScoped<IPriceEstimator, PriceEstimator>();

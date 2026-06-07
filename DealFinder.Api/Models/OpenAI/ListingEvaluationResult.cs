@@ -2,7 +2,7 @@ using Newtonsoft.Json;
 
 namespace DealFinder.Api.Models.OpenAI;
 
-public class GpuEvaluationResult
+public class ListingEvaluationResult
 {
     [JsonProperty("model")]
     public string Model { get; set; } = "unknown";

@@ -4,7 +4,7 @@ namespace DealFinder.Api.Services.Scoring;
 
 public class ProductScorer : IProductScorer
 {
-    public double CalculateScore(GpuEvaluationResult evaluation)
+    public double CalculateScore(ListingEvaluationResult evaluation)
     {
         var positiveScore =
             0.35 * evaluation.QueryMatchScore +

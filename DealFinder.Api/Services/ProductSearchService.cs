@@ -1,5 +1,6 @@
 using DealFinder.Api.Models;
 using DealFinder.Api.Providers;
+using DealFinder.Api.Services.Classification;
 using DealFinder.Api.Services.OpenAI;
 using DealFinder.Api.Services.Pricing;
 using DealFinder.Api.Services.Scoring;
@@ -13,7 +14,7 @@ public class ProductSearchService : IProductSearchService
 
     private readonly IEnumerable<IProductProvider> _providers;
     private readonly IOpenAiService _openAiService;
-    private readonly IGpuPromptBuilder _gpuPromptBuilder;
+    private readonly IListingPromptBuilder _listingPromptBuilder;
     private readonly IProductScorer _productScorer;
     private readonly IPriceEstimator _priceEstimator;
     private readonly IPreFilterScorer _preFilterScorer;
@@ -22,7 +23,7 @@ public class ProductSearchService : IProductSearchService
     public ProductSearchService(
         IEnumerable<IProductProvider> providers,
         IOpenAiService openAiService,
-        IGpuPromptBuilder gpuPromptBuilder,
+        IListingPromptBuilder listingPromptBuilder,
         IProductScorer productScorer,
         IPriceEstimator priceEstimator,
         IPreFilterScorer preFilterScorer,
@@ -31,7 +32,7 @@ public class ProductSearchService : IProductSearchService
     {
         _providers = providers;
         _openAiService = openAiService;
-        _gpuPromptBuilder = gpuPromptBuilder;
+        _listingPromptBuilder = listingPromptBuilder;
         _productScorer = productScorer;
         _priceEstimator = priceEstimator;
         _preFilterScorer = preFilterScorer;
@@ -40,26 +41,46 @@ public class ProductSearchService : IProductSearchService
 
     public async Task<List<ProductResult>> SearchAsync(ProductSearchRequest request)
     {
+        var category = ProductCategoryDetector.Detect(request.Query);
+
+        if (category == ProductCategory.Generic)
+        {
+            return new List<ProductResult>();
+        }
+
         var allResults = await FetchAllProviderResultsAsync(request.Query);
+
+        Console.WriteLine($"Detected category: {category}");
+        Console.WriteLine($"All results count: {allResults.Count}");
+
+        foreach (var product in allResults)
+        {
+            Console.WriteLine($"Product: {product.Title} | Category: '{product.Category}'");
+        }
+
+        var categoryResults = FilterByCategory(allResults, category);
+
+        Console.WriteLine($"Category results count: {categoryResults.Count}");
+
+        if (categoryResults.Count == 0)
+        {
+            return new List<ProductResult>();
+        }
+
 
         var estimatedMeanPrice = _priceEstimator.EstimateMeanPrice(
             request.Query,
-            allResults
+            categoryResults
         );
 
         var intent = _queryIntentParser.Parse(request.Query);
 
-        var candidates = allResults
-            .OrderByDescending(product =>
-                _preFilterScorer.Score(
-                    request.Query,
-                    product,
-                    estimatedMeanPrice,
-                    intent
-                )
-            )
-            .Take(MaxCandidatesForAiEvaluation)
-            .ToList();
+        var candidates = SelectCandidates(
+            request,
+            categoryResults,
+            estimatedMeanPrice,
+            intent
+        );
 
         await EvaluateCandidatesWithAiAsync(
             request,
@@ -83,6 +104,37 @@ public class ProductSearchService : IProductSearchService
         }
 
         return allResults;
+    }
+
+
+    private static List<ProductResult> FilterByCategory(
+        List<ProductResult> products,
+        string category
+    )
+    {
+        return products
+            .Where(product => product.Category == category)
+            .ToList();
+    }
+
+    private List<ProductResult> SelectCandidates(
+        ProductSearchRequest request,
+        List<ProductResult> products,
+        decimal? estimatedMeanPrice,
+        SearchIntent intent
+    )
+    {
+        return products
+            .OrderByDescending(product =>
+                _preFilterScorer.Score(
+                    request.Query,
+                    product,
+                    estimatedMeanPrice,
+                    intent
+                )
+            )
+            .Take(MaxCandidatesForAiEvaluation)
+            .ToList();
     }
 
     private async Task EvaluateCandidatesWithAiAsync(
@@ -129,13 +181,13 @@ public class ProductSearchService : IProductSearchService
         decimal? estimatedMeanPrice
     )
     {
-        var prompt = _gpuPromptBuilder.BuildEvaluationPrompt(
+        var prompt = _listingPromptBuilder.BuildEvaluationPrompt(
             request,
             product,
             estimatedMeanPrice
         );
 
-        var evaluation = await _openAiService.EvaluateGpuListingAsync(prompt);
+        var evaluation = await _openAiService.EvaluateListingAsync(prompt);
 
         product.Score = _productScorer.CalculateScore(evaluation);
         product.Summary = evaluation.Reasoning;

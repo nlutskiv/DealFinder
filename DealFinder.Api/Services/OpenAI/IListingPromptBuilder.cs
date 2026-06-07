@@ -2,7 +2,7 @@ using DealFinder.Api.Models;
 
 namespace DealFinder.Api.Services.OpenAI;
 
-public interface IGpuPromptBuilder
+public interface IListingPromptBuilder
 {
     string BuildEvaluationPrompt(
         ProductSearchRequest request,

@@ -4,5 +4,5 @@ namespace DealFinder.Api.Services.OpenAI;
 
 public interface IOpenAiService
 {
-    Task<GpuEvaluationResult> EvaluateGpuListingAsync(string prompt);
+    Task<ListingEvaluationResult> EvaluateListingAsync(string prompt);
 }

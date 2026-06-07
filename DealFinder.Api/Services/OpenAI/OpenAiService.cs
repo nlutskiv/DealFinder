@@ -17,7 +17,7 @@ public class OpenAiService : IOpenAiService
         _configuration = configuration;
     }
 
-    public async Task<GpuEvaluationResult> EvaluateGpuListingAsync(string prompt)
+    public async Task<ListingEvaluationResult> EvaluateListingAsync(string prompt)
     {
         var apiKey = _configuration["OpenAI:ApiKey"];
 
@@ -76,7 +76,7 @@ public class OpenAiService : IOpenAiService
 
         Console.WriteLine("RAW GPT JSON:");
         Console.WriteLine(modelOutput);
-        return JsonConvert.DeserializeObject<GpuEvaluationResult>(
+        return JsonConvert.DeserializeObject<ListingEvaluationResult>(
             modelOutput
         )!;
     }
