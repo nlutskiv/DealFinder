@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://deal-finder-gamma.vercel.app/sitemap.xml
