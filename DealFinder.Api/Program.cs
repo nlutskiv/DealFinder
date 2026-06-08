@@ -29,7 +29,7 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "http://localhost:4200",
-                "https://your-frontend-domain.vercel.app"
+                "https://deal-finder-gamma.vercel.app"  
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
