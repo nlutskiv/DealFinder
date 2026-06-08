@@ -12,6 +12,7 @@
 
     <div class="category-tabs">
       <button
+        type="button"
         class="category-tab"
         *ngFor="let category of categories"
         [class.active]="selectedCategory === category.key"
@@ -30,6 +31,7 @@
 
         <div class="sort-control" *ngIf="results.length > 0">
           <button
+            type="button"
             class="sort-pill"
             [class.active]="sortBy === 'score'"
             (click)="setSort('score')"
@@ -38,6 +40,7 @@
           </button>
 
           <button
+            type="button"
             class="sort-pill"
             [class.active]="sortBy === 'price-low'"
             (click)="setSort('price-low')"
@@ -46,6 +49,7 @@
           </button>
 
           <button
+            type="button"
             class="sort-pill"
             [class.active]="sortBy === 'price-high'"
             (click)="setSort('price-high')"
@@ -65,9 +69,11 @@
         *ngIf="!loadingCatalog && categoryHasProducts; else noProducts"
       >
         <button
+          type="button"
           class="model-option"
           *ngFor="let option of filteredOptions"
           [class.active]="selectedOption?.id === option.id"
+          [class.loading]="loading && selectedOption?.id === option.id"
           (click)="selectOption(option)"
         >
           <span class="model-name">{{ option.label }}</span>
@@ -78,6 +84,14 @@
 
           <span class="model-description">
             {{ option.listingCount }} listings
+          </span>
+
+          <span
+            class="model-loading"
+            *ngIf="loading && selectedOption?.id === option.id"
+          >
+            <span class="spinner tiny-spinner"></span>
+            Analyzing...
           </span>
         </button>
       </div>
@@ -94,16 +108,12 @@
           </p>
         </div>
       </ng-template>
+
     </div>
 
     <p class="error" *ngIf="error">
       {{ error }}
     </p>
-
-    <div class="loading-row" *ngIf="loading">
-      <span class="spinner"></span>
-      <span>Analyzing listings...</span>
-    </div>
   </div>
 </section>
 

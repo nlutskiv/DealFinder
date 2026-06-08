@@ -1112,3 +1112,36 @@ body {
 .sitemap-links a:hover {
   text-decoration: underline;
 }
+
+.picker-panel {
+  position: relative;
+}
+
+.model-option {
+  position: relative;
+  min-height: 132px;
+  padding-bottom: 34px;
+}
+
+.model-option.loading {
+  border-color: var(--color-primary);
+}
+
+.model-loading {
+  position: absolute;
+  left: var(--spacing-md);
+  bottom: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.tiny-spinner {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+}

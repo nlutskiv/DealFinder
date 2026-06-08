@@ -12,6 +12,9 @@ obj/
 *.sqlite
 *.sqlite3
 
+# Angular cache
+dealfinder-client/.angular/cache/
+dealfinder-client/.angular/
 
 # Compiled output
 /dist

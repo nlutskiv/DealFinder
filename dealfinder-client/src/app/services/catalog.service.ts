@@ -4,11 +4,14 @@ import { Observable } from 'rxjs';
 
 import { CatalogOption } from '../models/catalog-option';
 
+import { environment } from '../../environments/environment';
+
+
 @Injectable({
   providedIn: 'root'
 })
 export class CatalogService {
-  private readonly apiUrl = 'http://localhost:5185/api/Catalog';
+  private readonly apiUrl = `${environment.apiBaseUrl}/api/Catalog`;
 
   constructor(private http: HttpClient) {}
 

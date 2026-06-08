@@ -123,7 +123,6 @@ export class Marketplace implements OnInit {
 
     this.loading = true;
     this.error = '';
-    this.results = [];
 
     this.productSearchService.search(this.selectedOption.id).subscribe({
       next: (data: ProductResult[]) => {
