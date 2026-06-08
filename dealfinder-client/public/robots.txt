@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://deal-finder-gamma.vercel.app/sitemap.xml
+Sitemap: https://deal-finder-pc.vercel.app/sitemap.xml
