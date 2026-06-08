@@ -29,7 +29,8 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "http://localhost:4200",
-                "https://deal-finder-gamma.vercel.app"  
+                "https://deal-finder-gamma.vercel.app",
+                "https://deal-finder-fi7yjxwe-nlutskivs-projects.vercel.app"
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
@@ -87,6 +88,7 @@ app.Use(async (context, next) =>
 });
 
 app.UseCors("AllowFrontend");
+app.UseAuthorization();
 
 app.UseRateLimiter();
 
