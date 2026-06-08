@@ -11,6 +11,7 @@ public class DealFinderDbContext : DbContext
     }
 
     public DbSet<AiEvaluationCache> AiEvaluationCaches => Set<AiEvaluationCache>();
+    public DbSet<ProductCatalog> ProductCatalog => Set<ProductCatalog>();
     public DbSet<ProductListing> ProductListings => Set<ProductListing>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -42,5 +43,11 @@ public class DealFinderDbContext : DbContext
         modelBuilder.Entity<ProductListing>()
             .Property(x => x.Category)
             .IsRequired();
+        modelBuilder.Entity<ProductCatalog>()
+            .HasIndex(x => x.SearchQuery)
+            .IsUnique();
+
+        modelBuilder.Entity<ProductListing>()
+            .HasIndex(x => x.ProductCatalogId);
     }
 }

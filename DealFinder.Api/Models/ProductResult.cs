@@ -16,4 +16,5 @@ public class ProductResult
     public string Summary { get; set; } = "";
     public string ImageUrl { get; set; } = "";
     public string Category { get; set; } = "";
+    public int? ProductCatalogId { get; set; }
 }

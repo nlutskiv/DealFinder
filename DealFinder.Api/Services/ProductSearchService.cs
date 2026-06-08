@@ -5,6 +5,7 @@ using DealFinder.Api.Services.OpenAI;
 using DealFinder.Api.Services.Pricing;
 using DealFinder.Api.Services.Scoring;
 using DealFinder.Api.Services.Caching;
+using DealFinder.Api.Services.Catalog;
 
 namespace DealFinder.Api.Services;
 
@@ -21,6 +22,8 @@ public class ProductSearchService : IProductSearchService
     private readonly IPreFilterScorer _preFilterScorer;
     private readonly IQueryIntentParser _queryIntentParser;
     private readonly IAiEvaluationCacheService _cacheService;
+    private readonly IProductCatalogService _catalogService;
+    private readonly ILogger<ProductSearchService> _logger;
 
     public ProductSearchService(
         IEnumerable<IProductProvider> providers,
@@ -30,7 +33,9 @@ public class ProductSearchService : IProductSearchService
         IPriceEstimator priceEstimator,
         IPreFilterScorer preFilterScorer,
         IQueryIntentParser queryIntentParser,
-        IAiEvaluationCacheService cacheService
+        IAiEvaluationCacheService cacheService,
+        IProductCatalogService catalogService,
+        ILogger<ProductSearchService> logger
     )
     {
         _providers = providers;
@@ -41,30 +46,34 @@ public class ProductSearchService : IProductSearchService
         _preFilterScorer = preFilterScorer;
         _queryIntentParser = queryIntentParser;
         _cacheService = cacheService;
+        _catalogService = catalogService;
+        _logger = logger;
     }
 
     public async Task<List<ProductResult>> SearchAsync(ProductSearchRequest request)
     {
-        var category = ProductCategoryDetector.Detect(request.Query);
+        var catalogProduct =
+            await _catalogService.GetByIdAsync(request.CatalogProductId);
 
-        if (category == ProductCategory.Generic)
+        if (catalogProduct is null)
         {
             return new List<ProductResult>();
         }
 
+        request.Query = catalogProduct.SearchQuery;
+
+        var category = catalogProduct.Category;
+
         var allResults = await FetchAllProviderResultsAsync(request.Query);
 
-        Console.WriteLine($"Detected category: {category}");
-        Console.WriteLine($"All results count: {allResults.Count}");
-
-        foreach (var product in allResults)
-        {
-            Console.WriteLine($"Product: {product.Title} | Category: '{product.Category}'");
-        }
-
-        var categoryResults = FilterByCategory(allResults, category);
-
-        Console.WriteLine($"Category results count: {categoryResults.Count}");
+        var categoryResults = allResults
+            .Where(product =>
+                product.Category.Equals(category, StringComparison.OrdinalIgnoreCase)
+            )
+            .Where(product =>
+                product.ProductCatalogId == request.CatalogProductId
+            )
+            .ToList();
 
         if (categoryResults.Count == 0)
         {
@@ -163,8 +172,10 @@ public class ProductSearchService : IProductSearchService
             }
             catch (Exception ex)
             {
-                Console.WriteLine(
-                    $"AI evaluation failed for '{product.Title}': {ex.Message}"
+                _logger.LogWarning(
+                    ex,
+                    "AI evaluation failed for listing {Title}",
+                    product.Title
                 );
 
                 product.Score = 0;
@@ -216,14 +227,15 @@ public class ProductSearchService : IProductSearchService
         product.Summary = evaluation.Reasoning;
         product.Condition = evaluation.Condition;
 
-        Console.WriteLine(
-            $"Title: {product.Title}, " +
-            $"Query: {evaluation.QueryMatchScore}, " +
-            $"Value: {evaluation.ValueScore}, " +
-            $"ConditionScore: {evaluation.ConditionScore}, " +
-            $"SellerTrust: {evaluation.SellerTrustScore}, " +
-            $"Risk: {evaluation.RiskScore}, " +
-            $"Final: {product.Score}"
+        _logger.LogInformation(
+            "Evaluated listing {Title}. Query={QueryMatch}, Value={Value}, Condition={ConditionScore}, SellerTrust={SellerTrust}, Risk={Risk}, Final={Final}",
+            product.Title,
+            evaluation.QueryMatchScore,
+            evaluation.ValueScore,
+            evaluation.ConditionScore,
+            evaluation.SellerTrustScore,
+            evaluation.RiskScore,
+            product.Score
         );
     }
     

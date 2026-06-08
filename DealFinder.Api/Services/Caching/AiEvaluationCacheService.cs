@@ -13,12 +13,15 @@ public class AiEvaluationCacheService : IAiEvaluationCacheService
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromHours(24);
 
     private readonly IDbContextFactory<DealFinderDbContext> _dbContextFactory;
+    private readonly ILogger<AiEvaluationCacheService> _logger;
 
     public AiEvaluationCacheService(
-        IDbContextFactory<DealFinderDbContext> dbContextFactory
+        IDbContextFactory<DealFinderDbContext> dbContextFactory,
+        ILogger<AiEvaluationCacheService> logger
     )
     {
         _dbContextFactory = dbContextFactory;
+        _logger = logger;
     }
 
     public async Task<ListingEvaluationResult?> GetFreshAnalysisAsync(ProductResult product)
@@ -53,7 +56,10 @@ public class AiEvaluationCacheService : IAiEvaluationCacheService
             return null;
         }
 
-        Console.WriteLine($"CACHE HIT: {product.Title}");
+        _logger.LogInformation(
+            "AI cache hit for listing {Title}",
+            product.Title
+        );
 
         return new ListingEvaluationResult
         {
@@ -149,7 +155,10 @@ public class AiEvaluationCacheService : IAiEvaluationCacheService
 
         await dbContext.SaveChangesAsync();
 
-        Console.WriteLine($"CACHE SAVED: {product.Title}");
+        _logger.LogInformation(
+            "AI cache saved for listing {Title}",
+            product.Title
+        );
     }
 
     private static string HashText(string value)

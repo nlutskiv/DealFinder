@@ -1,0 +1,39 @@
+<header class="header">
+  <div class="container header-content">
+    <a class="logo" routerLink="/">
+      <div class="logo-icon">⌁</div>
+      <span>DealFinder</span>
+    </a>
+
+    <ul class="nav-links">
+      <li>
+        <a
+          class="nav-link"
+          routerLink="/"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          Marketplace
+        </a>
+      </li>
+
+      <li>
+        <a class="nav-link" routerLink="/about" routerLinkActive="active">
+          About
+        </a>
+      </li>
+
+      <li>
+        <a class="nav-link" routerLink="/rankings" routerLinkActive="active">
+          How rankings work
+        </a>
+      </li>
+
+      <li>
+        <a class="nav-link" routerLink="/contact" routerLinkActive="active">
+          Contact
+        </a>
+      </li>
+    </ul>
+  </div>
+</header>

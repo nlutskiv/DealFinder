@@ -19,6 +19,7 @@ public class ProductListing
     public string Url { get; set; } = "";
     public string ImageUrl { get; set; } = "";
 
+    public int? ProductCatalogId { get; set; }
     public string Category { get; set; } = "";
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;

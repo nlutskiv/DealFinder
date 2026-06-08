@@ -1,8 +1,9 @@
 export type ProductCategory = 'gpu' | 'cpu' | 'ram' | 'psu' | 'motherboard';
 
 export interface CatalogOption {
+  id: number;
   category: ProductCategory;
   label: string;
-  query: string;
   description?: string;
+  listingCount: number;
 }

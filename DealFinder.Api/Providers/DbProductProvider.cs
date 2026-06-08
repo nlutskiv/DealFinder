@@ -44,7 +44,8 @@ public class DbProductProvider : IProductProvider
             Marketplace = listing.Marketplace,
             Url = listing.Url,
             ImageUrl = listing.ImageUrl,
-            Category = listing.Category
+            Category = listing.Category,
+            ProductCatalogId = listing.ProductCatalogId
         };
     }
 }

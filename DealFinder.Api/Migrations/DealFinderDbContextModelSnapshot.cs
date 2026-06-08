@@ -81,6 +81,39 @@ namespace DealFinder.Api.Migrations
                     b.ToTable("AiEvaluationCaches");
                 });
 
+            modelBuilder.Entity("DealFinder.Api.Models.ProductCatalog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SearchQuery")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SearchQuery")
+                        .IsUnique();
+
+                    b.ToTable("ProductCatalog");
+                });
+
             modelBuilder.Entity("DealFinder.Api.Models.ProductListing", b =>
                 {
                     b.Property<int>("Id")
@@ -116,6 +149,9 @@ namespace DealFinder.Api.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("ProductCatalogId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<double?>("SellerFeedbackPercentage")
                         .HasColumnType("REAL");
 
@@ -138,6 +174,8 @@ namespace DealFinder.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ProductCatalogId");
 
                     b.HasIndex("Url")
                         .IsUnique();
