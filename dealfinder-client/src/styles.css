@@ -1145,3 +1145,11 @@ body {
   height: 12px;
   border-width: 2px;
 }
+
+.logo-icon-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: cover;
+  display: block;
+}
