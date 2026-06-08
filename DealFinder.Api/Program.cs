@@ -27,11 +27,19 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .WithOrigins(
-                "http://localhost:4200",
-                "https://deal-finder-gamma.vercel.app",
-                "https://deal-finder-fi7yjxwe-nlutskivs-projects.vercel.app"
-            )
+            .SetIsOriginAllowed(origin =>
+            {
+                if (string.IsNullOrWhiteSpace(origin))
+                {
+                    return false;
+                }
+
+                var uri = new Uri(origin);
+
+                return
+                    uri.Host == "localhost" ||
+                    uri.Host.EndsWith(".vercel.app");
+            })
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -68,6 +76,48 @@ builder.Services.AddScoped<IQueryIntentParser, QueryIntentParser>();
 
 var app = builder.Build();
 
+// Explicit CORS headers for Vercel/frontend.
+// This is intentionally before all other middleware so even successful 200 responses
+// include Access-Control-Allow-Origin.
+app.Use(async (context, next) =>
+{
+    var origin = context.Request.Headers.Origin.ToString();
+
+    if (!string.IsNullOrWhiteSpace(origin))
+    {
+        var isAllowedOrigin = false;
+
+        try
+        {
+            var originUri = new Uri(origin);
+
+            isAllowedOrigin =
+                originUri.Host == "localhost" ||
+                originUri.Host.EndsWith(".vercel.app");
+        }
+        catch
+        {
+            isAllowedOrigin = false;
+        }
+
+        if (isAllowedOrigin)
+        {
+            context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+            context.Response.Headers["Vary"] = "Origin";
+            context.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
+            context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
+        }
+    }
+
+    if (context.Request.Method == HttpMethods.Options)
+    {
+        context.Response.StatusCode = StatusCodes.Status204NoContent;
+        return;
+    }
+
+    await next();
+});
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (!app.Environment.IsDevelopment())
@@ -88,9 +138,10 @@ app.Use(async (context, next) =>
 });
 
 app.UseCors("AllowFrontend");
-app.UseAuthorization();
 
 app.UseRateLimiter();
+
+app.UseAuthorization();
 
 using (var scope = app.Services.CreateScope())
 {
