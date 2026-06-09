@@ -1,0 +1,26 @@
+.model-picker {
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 12px;
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 245, 212, 0.45) rgba(255, 255, 255, 0.04);
+}
+
+.model-picker::-webkit-scrollbar {
+  width: 8px;
+}
+
+.model-picker::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+.model-picker::-webkit-scrollbar-thumb {
+  background: rgba(0, 245, 212, 0.45);
+  border-radius: 999px;
+}
+
+.model-picker::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 245, 212, 0.7);
+}

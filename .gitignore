@@ -16,6 +16,10 @@ obj/
 dealfinder-client/.angular/cache/
 dealfinder-client/.angular/
 
+# Angular build output
+dealfinder-client/dist/
+dist/
+
 # Compiled output
 /dist
 /tmp

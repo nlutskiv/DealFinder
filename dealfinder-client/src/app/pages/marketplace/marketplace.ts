@@ -17,7 +17,8 @@ interface CategoryTab {
   selector: 'app-marketplace',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './marketplace.html'
+  templateUrl: './marketplace.html',
+  styleUrl: './marketplace.css'
 })
 export class Marketplace implements OnInit {
   categories: CategoryTab[] = [
