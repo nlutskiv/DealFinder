@@ -234,6 +234,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         }
 
         catalogLabel = ExtractCatalogLabel(category, row);
+        catalogLabel = CanonicalProductLabel(category, catalogLabel);
 
         if (string.IsNullOrWhiteSpace(catalogLabel))
         {
@@ -285,17 +286,11 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
 
     private static string? ClassifyCategory(AwinRow row)
     {
-        var categoryText = Normalise(
-            string.Join(
-                " ",
-                row.MerchantCategory,
-                row.CategoryName,
-                row.CategoryPath,
-                row.SecondCategory,
-                row.ThirdCategory,
-                row.ProductType
-            )
-        );
+        var merchantCategory = NormaliseCategoryPath(row.MerchantCategory);
+        var productType = NormaliseCategoryPath(row.ProductType);
+        var categoryName = NormaliseCategoryPath(row.CategoryName);
+
+        var categoryText = $"{merchantCategory} {productType} {categoryName}";
 
         var titleText = Normalise(
             string.Join(
@@ -317,39 +312,67 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             return null;
         }
 
-        if (ContainsAny(allText, GlobalRejectWords))
+        // PcNova category-path source of truth.
+        if (CategoryContains(merchantCategory, "pc components", "processors"))
         {
-            return null;
+            return HasCpuModel(titleText) && !ContainsAny(allText, CpuRejectWords)
+                ? Cpu
+                : null;
         }
 
-        // Use title/model patterns first because PcNova categories may be broad/generic.
-        if (HasGpuModel(titleText) && !ContainsAny(allText, GpuRejectWords))
+        if (CategoryContains(merchantCategory, "pc components", "graphics cards"))
         {
-            return Gpu;
+            return HasGpuModel(titleText) && !ContainsAny(allText, GpuRejectWords)
+                ? Gpu
+                : null;
         }
 
-        if (HasCpuModel(titleText) && !ContainsAny(allText, CpuRejectWords))
+        if (CategoryContains(merchantCategory, "pc components", "motherboards"))
         {
-            return Cpu;
+            return HasMotherboardSignal(titleText) && !ContainsAny(allText, MotherboardRejectWords)
+                ? Motherboard
+                : null;
         }
 
-        if (HasMotherboardSignal(allText) && !ContainsAny(allText, MotherboardRejectWords))
+        if (CategoryContains(merchantCategory, "pc components", "memory modules"))
         {
-            return Motherboard;
+            return HasRamSignal(titleText) && !ContainsAny(allText, RamRejectWords)
+                ? Ram
+                : null;
         }
 
-        if (HasRamSignal(allText) && !ContainsAny(allText, RamRejectWords))
+        // PcNova dumps PSUs into "Other", so category alone is not enough.
+        if (CategoryContains(merchantCategory, "pc components", "other"))
         {
-            return Ram;
-        }
-
-        if (HasPsuSignal(allText) && !ContainsAny(allText, PsuRejectWords))
-        {
-            return Psu;
+            return HasPsuSignal(titleText) && !ContainsAny(allText, PsuRejectWords)
+                ? Psu
+                : null;
         }
 
         return null;
     }
+
+    private static string NormaliseCategoryPath(string value)
+    {
+        value = value
+            .Replace("&gt;", ">")
+            .Replace("&amp;", "&")
+            .Replace("/", ">")
+            .Replace("\\", ">")
+            .ToLowerInvariant();
+
+        value = Regex.Replace(value, @"\s+", " ").Trim();
+
+        return value;
+    }
+
+    private static bool CategoryContains(string categoryPath, params string[] requiredParts)
+    {
+        return requiredParts.All(part =>
+            categoryPath.Contains(part, StringComparison.OrdinalIgnoreCase)
+        );
+    }
+
 
     private static string ExtractCatalogLabel(string category, AwinRow row)
     {
@@ -460,6 +483,68 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         return wattageMatch.Value
             .ToUpperInvariant()
             .Replace(" ", "");
+    }
+
+    private static string CanonicalProductLabel(string category, string label)
+    {
+        var text = label.Trim().ToUpperInvariant();
+
+        if (category == Gpu)
+        {
+            text = text.Replace("GEFORCE ", "");
+            text = text.Replace("RADEON ", "");
+
+            text = Regex.Replace(text, @"\bRTX\s?(\d{4,5})\s?(TI|SUPER)?\b", m =>
+            {
+                var suffix = m.Groups[2].Success ? $" {ToNiceSuffix(m.Groups[2].Value)}" : "";
+                return $"RTX {m.Groups[1].Value}{suffix}";
+            });
+
+            text = Regex.Replace(text, @"\bGTX\s?(\d{4,5})\s?(TI|SUPER)?\b", m =>
+            {
+                var suffix = m.Groups[2].Success ? $" {ToNiceSuffix(m.Groups[2].Value)}" : "";
+                return $"GTX {m.Groups[1].Value}{suffix}";
+            });
+
+            text = Regex.Replace(text, @"\bRX\s?(\d{4})\s?(XT|XTX|GRE)?\b", m =>
+            {
+                var suffix = m.Groups[2].Success ? $" {m.Groups[2].Value.ToUpperInvariant()}" : "";
+                return $"RX {m.Groups[1].Value}{suffix}";
+            });
+
+            text = Regex.Replace(text, @"\bARC\s?A(\d{3})\b", "Arc A$1");
+        }
+
+        if (category == Cpu)
+        {
+            text = text.Replace("INTEL ", "");
+
+            text = Regex.Replace(
+                text,
+                @"\b(?:CORE\s+)?I([3579])[-\s]?(\d{3,5}\w*)\b",
+                "Core i$1-$2"
+            );
+
+            text = Regex.Replace(
+                text,
+                @"\bRYZEN\s?(\d)\s+(\w+)\b",
+                "Ryzen $1 $2"
+            );
+        }
+
+        text = Regex.Replace(text, @"\s+", " ").Trim();
+
+        return text;
+    }
+
+    private static string ToNiceSuffix(string value)
+    {
+        return value.ToUpperInvariant() switch
+        {
+            "TI" => "Ti",
+            "SUPER" => "Super",
+            _ => value
+        };
     }
 
     private async Task<ProductCatalog> GetOrCreateCatalogProductAsync(
@@ -715,7 +800,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
 
         var hasPsuSignal = Regex.IsMatch(
             text,
-            @"\b(atx|sfx|80\s?plus|80\+|modular|psu|power supply)\b",
+            @"\b(psu|power supply|power-supply|atx|sfx|80\s?plus|80\+|modular)\b",
             RegexOptions.IgnoreCase
         );
 

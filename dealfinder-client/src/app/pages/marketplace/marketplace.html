@@ -29,34 +29,12 @@
           <p>Choose a product to analyze available listings.</p>
         </div>
 
-        <div class="sort-control" *ngIf="results.length > 0">
-          <button
-            type="button"
-            class="sort-pill"
-            [class.active]="sortBy === 'score'"
-            (click)="setSort('score')"
-          >
-            Best score
-          </button>
-
-          <button
-            type="button"
-            class="sort-pill"
-            [class.active]="sortBy === 'price-low'"
-            (click)="setSort('price-low')"
-          >
-            Cheapest
-          </button>
-
-          <button
-            type="button"
-            class="sort-pill"
-            [class.active]="sortBy === 'price-high'"
-            (click)="setSort('price-high')"
-          >
-            Expensive
-          </button>
-        </div>
+        <input
+          class="model-search-input"
+          type="text"
+          [(ngModel)]="modelSearch"
+          [placeholder]="'Search ' + selectedCategoryLabel + ' models...'"
+        />
       </div>
 
       <div class="loading-row" *ngIf="loadingCatalog">
@@ -66,7 +44,7 @@
 
       <div
         class="model-picker"
-        *ngIf="!loadingCatalog && categoryHasProducts; else noProducts"
+        *ngIf="!loadingCatalog && categoryHasProducts && filteredOptions.length > 0"
       >
         <button
           type="button"
@@ -76,7 +54,9 @@
           [class.loading]="loading && selectedOption?.id === option.id"
           (click)="selectOption(option)"
         >
-          <span class="model-name">{{ option.label }}</span>
+          <span class="model-name">
+            {{ option.label }}
+          </span>
 
           <span class="model-description">
             {{ option.description }}
@@ -96,19 +76,27 @@
         </button>
       </div>
 
-      <ng-template #noProducts>
-        <div
-          class="empty-category-state"
-          *ngIf="!loadingCatalog"
-        >
-          <h3>No products available at the moment</h3>
-          <p>
-            There are currently no {{ selectedCategoryLabel }} listings in the database.
-            Check back later once new products are imported.
-          </p>
-        </div>
-      </ng-template>
+      <div
+        class="empty-category-state"
+        *ngIf="!loadingCatalog && categoryHasProducts && filteredOptions.length === 0"
+      >
+        <h3>No matching models found</h3>
+        <p>
+          We do not currently have listings for that model. Try another search
+          or check back after the next product import.
+        </p>
+      </div>
 
+      <div
+        class="empty-category-state"
+        *ngIf="!loadingCatalog && !categoryHasProducts"
+      >
+        <h3>No products available at the moment</h3>
+        <p>
+          There are currently no {{ selectedCategoryLabel }} listings in the database.
+          Check back later once new products are imported.
+        </p>
+      </div>
     </div>
 
     <p class="error" *ngIf="error">
@@ -119,14 +107,45 @@
 
 <section class="products-section" *ngIf="results.length > 0">
   <div class="container">
-    <div class="section-header">
-      <h2 class="section-title">
-        {{ selectedOption?.label }} listings
-      </h2>
+    <div class="section-header listings-header">
+      <div>
+        <h2 class="section-title">
+          {{ selectedOption?.label }} listings
+        </h2>
 
-      <span class="results-count">
-        {{ sortedResults.length }} results
-      </span>
+        <span class="results-count">
+          {{ sortedResults.length }} results
+        </span>
+      </div>
+
+      <div class="sort-control">
+        <button
+          type="button"
+          class="sort-pill"
+          [class.active]="sortBy === 'score'"
+          (click)="setSort('score')"
+        >
+          Best score
+        </button>
+
+        <button
+          type="button"
+          class="sort-pill"
+          [class.active]="sortBy === 'price-low'"
+          (click)="setSort('price-low')"
+        >
+          Cheapest
+        </button>
+
+        <button
+          type="button"
+          class="sort-pill"
+          [class.active]="sortBy === 'price-high'"
+          (click)="setSort('price-high')"
+        >
+          Expensive
+        </button>
+      </div>
     </div>
 
     <div class="products-grid">
@@ -134,7 +153,8 @@
         <div class="card-image-container">
           <img
             class="card-image"
-            [src]="product.imageUrl || 'https://images.unsplash.com/photo-1591489378430-ef2f4c626b35?q=80&w=1200&auto=format&fit=crop'"
+            [src]="product.imageUrl || '/fallback-product.png'"
+            (error)="onImageError($event)"
             alt="Product"
           />
 

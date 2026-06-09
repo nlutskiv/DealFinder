@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
+import { FormsModule } from '@angular/forms';
 import { ProductResult } from '../../models/product-result';
 import { CatalogOption, ProductCategory } from '../../models/catalog-option';
 import { ProductSearchService } from '../../services/product-search.service';
@@ -16,7 +16,7 @@ interface CategoryTab {
 @Component({
   selector: 'app-marketplace',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './marketplace.html',
   styleUrl: './marketplace.css'
 })
@@ -35,6 +35,7 @@ export class Marketplace implements OnInit {
   catalogOptions: CatalogOption[] = [];
   results: ProductResult[] = [];
 
+  modelSearch = '';
   loadingCatalog = false;
   loading = false;
   error = '';
@@ -51,13 +52,26 @@ export class Marketplace implements OnInit {
   }
 
   get filteredOptions(): CatalogOption[] {
-    return this.catalogOptions.filter(
-      option => option.category === this.selectedCategory
-    );
+    const search = this.modelSearch.trim().toLowerCase();
+
+    return this.catalogOptions
+      .filter(option => option.category === this.selectedCategory)
+      .filter(option => {
+        if (!search) {
+          return true;
+        }
+
+        return (
+          option.label.toLowerCase().includes(search) ||
+          (option.description ?? '').toLowerCase().includes(search)
+        );
+      });
   }
 
   get categoryHasProducts(): boolean {
-    return this.filteredOptions.length > 0;
+    return this.catalogOptions.some(
+      option => option.category === this.selectedCategory
+    );
   }
 
   get sortedResults(): ProductResult[] {
@@ -97,6 +111,12 @@ export class Marketplace implements OnInit {
 
   setSort(sortBy: SortOption): void {
     this.sortBy = sortBy;
+  }
+
+
+  onImageError(event: Event): void {
+    const image = event.target as HTMLImageElement;
+    image.src = '/fallback-product.png';
   }
 
   private loadCatalog(): void {
