@@ -74,14 +74,14 @@ builder.Services.AddScoped<IProductScorer, ProductScorer>();
 builder.Services.AddScoped<IPreFilterScorer, PreFilterScorer>();
 builder.Services.AddScoped<IPriceEstimator, PriceEstimator>();
 builder.Services.AddScoped<IQueryIntentParser, QueryIntentParser>();
+
 builder.Services.AddScoped<IAwinFeedIngestionService, AwinFeedIngestionService>();
 builder.Services.AddHostedService<AwinFeedRefreshJob>();
 
 builder.Services.AddHttpClient("AwinFeeds", client =>
 {
-    client.Timeout = TimeSpan.FromMinutes(10);
+    client.Timeout = TimeSpan.FromMinutes(30);
 });
-
 
 
 var app = builder.Build();

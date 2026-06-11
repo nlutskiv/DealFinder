@@ -1,14 +1,9 @@
 using System.IO.Compression;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace DealFinder.Api.Services.Feed;
 
-/// <summary>
-/// Downloads the Awin feed list, finds feed download URLs,
-/// then ingests each joined/available advertiser feed.
-/// </summary>
 public class AwinFeedRefreshJob : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
@@ -30,82 +25,145 @@ public class AwinFeedRefreshJob : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        var runOnStartup = _config.GetValue("Awin:RunOnStartup", true);
+        var runOnStartup = _config.GetValue("Awin:RunOnStartup", false);
+        var syncIntervalHours = _config.GetValue("Awin:SyncIntervalHours", 12);
 
         if (runOnStartup)
         {
             await RunIngestionAsync(ct);
         }
 
-        while (!ct.IsCancellationRequested)
+        using var timer = new PeriodicTimer(TimeSpan.FromHours(syncIntervalHours));
+
+        while (await timer.WaitForNextTickAsync(ct))
         {
-            var nextRun = NextRunAt(hour: 3);
-            var delay = nextRun - DateTime.UtcNow;
-
-            _logger.LogInformation(
-                "Next Awin feed refresh at {NextRun} UTC ({Delay} from now)",
-                nextRun,
-                delay
-            );
-
-            await Task.Delay(delay, ct);
             await RunIngestionAsync(ct);
         }
     }
 
-    private async Task RunIngestionAsync(CancellationToken ct)
+    private async Task RunIngestionAsync(CancellationToken ct = default)
     {
         try
         {
-            var feedListUrl = _config["Awin:FeedListUrl"]
-                ?? throw new InvalidOperationException("Awin:FeedListUrl not configured.");
+            var feeds = await GetAllowedFeedsAsync(ct);
 
-            var allowedAdvertiserIds = ReadConfigSet("Awin:AllowedAdvertiserIds");
-            var allowedAdvertiserNames = ReadConfigSet("Awin:AllowedAdvertiserNames");
+            _logger.LogInformation(
+                "Found {Count} Awin feed(s) to ingest: {Feeds}",
+                feeds.Count,
+                string.Join(", ", feeds.Select(feed => $"{feed.AdvertiserId}:{feed.AdvertiserName}"))
+            );
 
-            using var scope = _scopeFactory.CreateScope();
-            var ingestion = scope.ServiceProvider.GetRequiredService<IAwinFeedIngestionService>();
+            var maxConcurrentFeeds = _config.GetValue("Awin:MaxConcurrentFeeds", 2);
 
-            var http = _httpClientFactory.CreateClient("AwinFeeds");
+            using var semaphore = new SemaphoreSlim(maxConcurrentFeeds);
 
-            _logger.LogInformation("Downloading Awin feed list from {FeedListUrl}", feedListUrl);
-
-            var feedListText = await http.GetStringAsync(feedListUrl, ct);
-
-            var feeds = ExtractFeedEntries(feedListText)
-                .Where(feed => IsAllowedFeed(feed, allowedAdvertiserIds, allowedAdvertiserNames))
-                .ToList();
-
-            _logger.LogInformation("Found {Count} Awin feed(s) to ingest.", feeds.Count);
-
-            foreach (var feed in feeds)
+            var tasks = feeds.Select(async feed =>
             {
-                ct.ThrowIfCancellationRequested();
+                await semaphore.WaitAsync(ct);
 
-                _logger.LogInformation(
-                    "Downloading Awin feed. AdvertiserId={AdvertiserId}, AdvertiserName={AdvertiserName}, Url={Url}",
-                    feed.AdvertiserId,
-                    feed.AdvertiserName,
-                    feed.Url
-                );
+                try
+                {
+                    await IngestSingleFeedSafelyAsync(feed, ct);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
 
-                await using var stream = await http.GetStreamAsync(feed.Url, ct);
-                await using var decompressed = WrapIfCompressed(stream, feed.Url);
-
-                await ingestion.IngestAsync(
-                    feedStream: decompressed,
-                    sourceName: string.IsNullOrWhiteSpace(feed.AdvertiserName)
-                        ? "awin"
-                        : $"awin_{Slug(feed.AdvertiserName)}",
-                    ct: ct
-                );
-            }
+            await Task.WhenAll(tasks);
 
             _logger.LogInformation("Awin feed refresh finished.");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Awin feed refresh failed.");
+        }
+    }
+
+    private async Task<List<AwinFeedEntry>> GetAllowedFeedsAsync(CancellationToken ct)
+    {
+        var feedListUrl = _config["Awin:FeedListUrl"]
+            ?? throw new InvalidOperationException("Awin:FeedListUrl not configured.");
+
+        var allowedAdvertiserIds = ReadConfigSet("Awin:AllowedAdvertiserIds");
+        var allowedAdvertiserNames = ReadConfigSet("Awin:AllowedAdvertiserNames");
+
+        var http = _httpClientFactory.CreateClient("AwinFeeds");
+
+        _logger.LogInformation("Downloading Awin feed list from {FeedListUrl}", feedListUrl);
+
+        var feedListText = await http.GetStringAsync(feedListUrl, ct);
+
+        var feeds = ExtractFeedEntries(feedListText)
+            .Where(feed => IsAllowedFeed(feed, allowedAdvertiserIds, allowedAdvertiserNames))
+            .ToList();
+
+        var advertiserOrder = (_config["Awin:AllowedAdvertiserIds"] ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select((id, index) => new { id, index })
+            .ToDictionary(x => x.id, x => x.index, StringComparer.OrdinalIgnoreCase);
+
+        return feeds
+            .OrderBy(feed =>
+                advertiserOrder.TryGetValue(feed.AdvertiserId, out var index)
+                    ? index
+                    : int.MaxValue
+            )
+            .ToList();
+    }
+
+    private async Task IngestSingleFeedSafelyAsync(
+        AwinFeedEntry feed,
+        CancellationToken ct)
+    {
+        try
+        {
+            _logger.LogInformation(
+                "Starting Awin feed. AdvertiserId={AdvertiserId}, AdvertiserName={AdvertiserName}",
+                feed.AdvertiserId,
+                feed.AdvertiserName
+            );
+
+            _logger.LogInformation(
+                "Downloading Awin feed. AdvertiserId={AdvertiserId}, AdvertiserName={AdvertiserName}, Url={Url}",
+                feed.AdvertiserId,
+                feed.AdvertiserName,
+                feed.Url
+            );
+
+            var http = _httpClientFactory.CreateClient("AwinFeeds");
+
+            using var scope = _scopeFactory.CreateScope();
+
+            var ingestion = scope.ServiceProvider
+                .GetRequiredService<IAwinFeedIngestionService>();
+
+            await using var stream = await http.GetStreamAsync(feed.Url, ct);
+            await using var decompressed = WrapIfCompressed(stream, feed.Url);
+
+            await ingestion.IngestAsync(
+                feedStream: decompressed,
+                sourceName: string.IsNullOrWhiteSpace(feed.AdvertiserName)
+                    ? $"awin_{feed.AdvertiserId}"
+                    : $"awin_{Slug(feed.AdvertiserName)}",
+                ct: ct
+            );
+
+            _logger.LogInformation(
+                "Finished Awin feed. AdvertiserId={AdvertiserId}, AdvertiserName={AdvertiserName}",
+                feed.AdvertiserId,
+                feed.AdvertiserName
+            );
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(
+                ex,
+                "Awin feed failed. AdvertiserId={AdvertiserId}, AdvertiserName={AdvertiserName}",
+                feed.AdvertiserId,
+                feed.AdvertiserName
+            );
         }
     }
 
@@ -128,11 +186,10 @@ public class AwinFeedRefreshJob : BackgroundService
         HashSet<string> allowedAdvertiserIds,
         HashSet<string> allowedAdvertiserNames)
     {
-        // If you configure nothing, ingest every feed that the feedList exposes.
-        // That feedList should only expose feeds your publisher account can access.
+        // Safer: import nothing unless explicitly allowlisted.
         if (allowedAdvertiserIds.Count == 0 && allowedAdvertiserNames.Count == 0)
         {
-            return true;
+            return false;
         }
 
         if (!string.IsNullOrWhiteSpace(feed.AdvertiserId) &&
@@ -171,7 +228,6 @@ public class AwinFeedRefreshJob : BackgroundService
             return delimitedFeeds;
         }
 
-        // Last-resort fallback: grab every URL-looking thing.
         return Regex.Matches(text, @"https?://[^\s""'<>,]+", RegexOptions.IgnoreCase)
             .Select(match => match.Value.Trim())
             .Where(url => !url.Contains("feedlist", StringComparison.OrdinalIgnoreCase))
@@ -207,11 +263,12 @@ public class AwinFeedRefreshJob : BackgroundService
     {
         if (element.ValueKind == JsonValueKind.Object)
         {
-            var possibleUrl = GetJsonString(element, "url")
-                ?? GetJsonString(element, "downloadUrl")
-                ?? GetJsonString(element, "download_url")
-                ?? GetJsonString(element, "feedUrl")
-                ?? GetJsonString(element, "feed_url");
+            var possibleUrl =
+                GetJsonString(element, "url") ??
+                GetJsonString(element, "downloadUrl") ??
+                GetJsonString(element, "download_url") ??
+                GetJsonString(element, "feedUrl") ??
+                GetJsonString(element, "feed_url");
 
             if (!string.IsNullOrWhiteSpace(possibleUrl) &&
                 possibleUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
@@ -219,12 +276,20 @@ public class AwinFeedRefreshJob : BackgroundService
                 feeds.Add(new AwinFeedEntry
                 {
                     Url = possibleUrl,
-                    AdvertiserId = GetJsonString(element, "advertiserId")
-                        ?? GetJsonString(element, "merchant_id")
-                        ?? GetJsonString(element, "merchantId"),
-                    AdvertiserName = GetJsonString(element, "advertiserName")
-                        ?? GetJsonString(element, "merchant_name")
-                        ?? GetJsonString(element, "merchantName")
+                    AdvertiserId =
+                        GetJsonString(element, "id") ??
+                        GetJsonString(element, "advertiserId") ??
+                        GetJsonString(element, "advertiser_id") ??
+                        GetJsonString(element, "merchant_id") ??
+                        GetJsonString(element, "merchantId") ??
+                        "",
+                    AdvertiserName =
+                        GetJsonString(element, "advertiser") ??
+                        GetJsonString(element, "advertiserName") ??
+                        GetJsonString(element, "advertiser_name") ??
+                        GetJsonString(element, "merchant_name") ??
+                        GetJsonString(element, "merchantName") ??
+                        ""
                 });
             }
 
@@ -283,22 +348,25 @@ public class AwinFeedRefreshJob : BackgroundService
             .Select(NormaliseHeader)
             .ToList();
 
-        var urlIndex = FindFirstHeaderIndex(headers, "url", "downloadurl", "download_url", "feedurl", "feed_url");
+        var urlIndex = FindFirstHeaderIndex(
+            headers,
+            "url",
+            "downloadurl",
+            "feedurl"
+        );
+
         var advertiserIdIndex = FindFirstHeaderIndex(
             headers,
             "id",
             "advertiserid",
-            "advertiser_id",
-            "merchantid",
-            "merchant_id"
+            "merchantid"
         );
+
         var advertiserNameIndex = FindFirstHeaderIndex(
             headers,
             "advertiser",
             "advertisername",
-            "advertiser_name",
-            "merchantname",
-            "merchant_name"
+            "merchantname"
         );
 
         if (urlIndex < 0)
@@ -342,16 +410,20 @@ public class AwinFeedRefreshJob : BackgroundService
 
     private static List<string> SplitLine(string line, char delimiter)
     {
-        // Good enough for Awin feed list rows.
-        // The actual product feed itself is parsed properly by CsvHelper.
-        return line.Split(delimiter).Select(part => part.Trim('"')).ToList();
+        return line.Split(delimiter)
+            .Select(part => part.Trim().Trim('"'))
+            .ToList();
     }
 
     private static int FindFirstHeaderIndex(List<string> headers, params string[] names)
     {
         foreach (var name in names)
         {
-            var index = headers.FindIndex(header => header.Equals(name, StringComparison.OrdinalIgnoreCase));
+            var normalisedName = NormaliseHeader(name);
+
+            var index = headers.FindIndex(header =>
+                header.Equals(normalisedName, StringComparison.OrdinalIgnoreCase)
+            );
 
             if (index >= 0)
             {
@@ -394,19 +466,6 @@ public class AwinFeedRefreshJob : BackgroundService
         return string.IsNullOrWhiteSpace(slug)
             ? "unknown"
             : slug;
-    }
-
-    private static DateTime NextRunAt(int hour)
-    {
-        var now = DateTime.UtcNow;
-        var next = now.Date.AddHours(hour);
-
-        if (next <= now)
-        {
-            next = next.AddDays(1);
-        }
-
-        return next;
     }
 
     private sealed class AwinFeedEntry
