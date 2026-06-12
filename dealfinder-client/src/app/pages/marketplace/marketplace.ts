@@ -1,12 +1,13 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Title } from '@angular/platform-browser';
 import { ProductResult } from '../../models/product-result';
 import { CatalogOption, ProductCategory } from '../../models/catalog-option';
 import { ProductSearchService } from '../../services/product-search.service';
 import { CatalogService } from '../../services/catalog.service';
 
-type SortOption = 'score' | 'price-low' | 'price-high';
+type SortOption = 'price-low' | 'price-high';
 
 interface CategoryTab {
   key: ProductCategory;
@@ -21,12 +22,16 @@ interface CategoryTab {
   styleUrl: './marketplace.css'
 })
 export class Marketplace implements OnInit {
+  @ViewChild('resultsSection') resultsSection!: ElementRef;
+
   categories: CategoryTab[] = [
     { key: 'gpu', label: 'GPU' },
     { key: 'cpu', label: 'CPU' },
     { key: 'ram', label: 'RAM' },
     { key: 'psu', label: 'PSU' },
-    { key: 'motherboard', label: 'Motherboard' }
+    { key: 'motherboard', label: 'Motherboard' },
+    { key: 'cooler', label: 'Cooler' },
+    { key: 'case', label: 'Case' }
   ];
 
   selectedCategory: ProductCategory = 'gpu';
@@ -40,12 +45,15 @@ export class Marketplace implements OnInit {
   loading = false;
   error = '';
 
-  sortBy: SortOption = 'score';
+  sortBy: SortOption = 'price-low';
 
   constructor(
     private productSearchService: ProductSearchService,
-    private catalogService: CatalogService
-  ) {}
+    private catalogService: CatalogService,
+    title: Title
+  ) {
+    title.setTitle('PC Parts Marketplace | DealFinder');
+  }
 
   ngOnInit(): void {
     this.loadCatalog();
@@ -53,48 +61,27 @@ export class Marketplace implements OnInit {
 
   get filteredOptions(): CatalogOption[] {
     const search = this.modelSearch.trim().toLowerCase();
-
     return this.catalogOptions
-      .filter(option => option.category === this.selectedCategory)
-      .filter(option => {
-        if (!search) {
-          return true;
-        }
-
-        return (
-          option.label.toLowerCase().includes(search) ||
-          (option.description ?? '').toLowerCase().includes(search)
-        );
-      });
+      .filter(o => o.category === this.selectedCategory)
+      .filter(o => !search || o.label.toLowerCase().includes(search));
   }
 
   get categoryHasProducts(): boolean {
-    return this.catalogOptions.some(
-      option => option.category === this.selectedCategory
-    );
+    return this.catalogOptions.some(o => o.category === this.selectedCategory);
   }
 
   get sortedResults(): ProductResult[] {
-    return [...this.results].sort((a, b) => {
-      switch (this.sortBy) {
-        case 'price-low':
-          return a.price - b.price;
-
-        case 'price-high':
-          return b.price - a.price;
-
-        case 'score':
-        default:
-          return b.score - a.score;
-      }
-    });
+    return [...this.results].sort((a, b) =>
+      this.sortBy === 'price-high' ? b.price - a.price : a.price - b.price
+    );
   }
 
   get selectedCategoryLabel(): string {
-    return (
-      this.categories.find(category => category.key === this.selectedCategory)
-        ?.label ?? 'Products'
-    );
+    return this.categories.find(c => c.key === this.selectedCategory)?.label ?? 'Products';
+  }
+
+  listingWord(count: number): string {
+    return count === 1 ? 'listing' : 'listings';
   }
 
   selectCategory(category: ProductCategory): void {
@@ -102,6 +89,7 @@ export class Marketplace implements OnInit {
     this.selectedOption = null;
     this.results = [];
     this.error = '';
+    this.modelSearch = '';
   }
 
   selectOption(option: CatalogOption): void {
@@ -113,16 +101,20 @@ export class Marketplace implements OnInit {
     this.sortBy = sortBy;
   }
 
+  priceRange(option: CatalogOption): string | null {
+    if (option.minPrice == null || option.maxPrice == null) return null;
+    const lo = Math.round(option.minPrice);
+    const hi = Math.round(option.maxPrice);
+    return lo === hi ? `£${lo}` : `£${lo} – £${hi}`;
+  }
 
   onImageError(event: Event): void {
-    const image = event.target as HTMLImageElement;
-    image.src = '/fallback-product.png';
+    (event.target as HTMLImageElement).src = '/fallback-product.svg';
   }
 
   private loadCatalog(): void {
     this.loadingCatalog = true;
     this.error = '';
-
     this.catalogService.getCatalog().subscribe({
       next: (catalog: CatalogOption[]) => {
         this.catalogOptions = catalog;
@@ -137,26 +129,20 @@ export class Marketplace implements OnInit {
   }
 
   private searchSelectedOption(): void {
-    if (!this.selectedOption) {
-      this.error = 'Please choose a product first.';
-      return;
-    }
-
+    if (!this.selectedOption) return;
     this.loading = true;
     this.error = '';
-
     this.productSearchService.search(this.selectedOption.id).subscribe({
       next: (data: ProductResult[]) => {
         this.results = data;
         this.loading = false;
+        setTimeout(() => {
+          this.resultsSection?.nativeElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
       },
       error: err => {
         console.error(err);
-
-        this.error =
-          err?.error?.message ||
-          'Search failed. Please try again later.';
-
+        this.error = err?.error?.message || 'Search failed. Please try again later.';
         this.loading = false;
       }
     });

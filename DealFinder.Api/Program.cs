@@ -3,15 +3,12 @@ using DealFinder.Api.Data.Seed;
 using DealFinder.Api.Middleware;
 using DealFinder.Api.Providers;
 using DealFinder.Api.Services;
-using DealFinder.Api.Services.Caching;
 using DealFinder.Api.Services.Catalog;
 using DealFinder.Api.Services.OpenAI;
-using DealFinder.Api.Services.Pricing;
-using DealFinder.Api.Services.Scoring;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 using DealFinder.Api.Services.Feed;
+using DealFinder.Api.Services.PcBuild;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,13 +47,33 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    options.AddFixedWindowLimiter("SearchPolicy", limiterOptions =>
-    {
-        limiterOptions.PermitLimit = 100;
-        limiterOptions.Window = TimeSpan.FromMinutes(10);
-        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        limiterOptions.QueueLimit = 0;
-    });
+    // 40 catalogue searches per IP per 10 minutes (no AI cost, just DB)
+    options.AddPolicy("SearchPolicy", ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 40,
+                Window = TimeSpan.FromMinutes(10),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }
+        )
+    );
+
+    // 5 AI-backed PC builds per IP per 10 minutes
+    options.AddPolicy("AiPolicy", ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(10),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }
+        )
+    );
 });
 
 builder.Services.AddHttpClient<IOpenAiService, OpenAiService>(client =>
@@ -67,13 +84,7 @@ builder.Services.AddHttpClient<IOpenAiService, OpenAiService>(client =>
 builder.Services.AddScoped<IProductProvider, DbProductProvider>();
 builder.Services.AddScoped<IProductSearchService, ProductSearchService>();
 builder.Services.AddScoped<IProductCatalogService, ProductCatalogService>();
-builder.Services.AddScoped<IAiEvaluationCacheService, AiEvaluationCacheService>();
-
-builder.Services.AddScoped<IListingPromptBuilder, CategoryPromptBuilder>();
-builder.Services.AddScoped<IProductScorer, ProductScorer>();
-builder.Services.AddScoped<IPreFilterScorer, PreFilterScorer>();
-builder.Services.AddScoped<IPriceEstimator, PriceEstimator>();
-builder.Services.AddScoped<IQueryIntentParser, QueryIntentParser>();
+builder.Services.AddScoped<IPcBuildService, PcBuildService>();
 
 builder.Services.AddScoped<IAwinFeedIngestionService, AwinFeedIngestionService>();
 builder.Services.AddHostedService<AwinFeedRefreshJob>();
@@ -103,7 +114,9 @@ app.Use(async (context, next) =>
 
             isAllowedOrigin =
                 originUri.Host == "localhost" ||
-                originUri.Host.EndsWith(".vercel.app");
+                originUri.Host.EndsWith(".vercel.app") ||
+                originUri.Host == "dealfinder.tech" ||
+                originUri.Host == "www.dealfinder.tech";
         }
         catch
         {

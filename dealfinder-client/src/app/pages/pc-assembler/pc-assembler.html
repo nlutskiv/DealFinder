@@ -1,0 +1,141 @@
+<section class="assembler-section">
+  <div class="container">
+    <div class="assembler-header">
+      <h1 class="assembler-title">PC Assembler</h1>
+      <p class="assembler-subtitle">
+        Enter your budget and we'll pick the best compatible build from live listings.
+        Parts are sourced from our database and verified for compatibility by AI.
+      </p>
+    </div>
+
+    <div class="budget-panel">
+      <div class="budget-input-row">
+        <div class="budget-field">
+          <label class="budget-label" for="budget">Budget</label>
+          <div class="budget-input-wrap">
+            <span class="budget-prefix">£</span>
+            <input
+              id="budget"
+              class="budget-input"
+              type="number"
+              [(ngModel)]="budget"
+              min="150"
+              max="20000"
+              step="50"
+              placeholder="1000"
+            />
+          </div>
+        </div>
+
+        <button
+          class="generate-btn"
+          type="button"
+          (click)="generate()"
+          [disabled]="loading"
+        >
+          <span *ngIf="!loading">Build My PC</span>
+          <span *ngIf="loading" class="btn-loading">
+            <span class="spinner tiny-spinner"></span>
+            Assembling...
+          </span>
+        </button>
+      </div>
+
+      <p class="budget-hint">
+        Minimum £150 · Allocates budget across GPU, CPU, Motherboard, RAM, Storage, PSU, Case, and Cooler
+      </p>
+    </div>
+
+    <p class="error" *ngIf="error">{{ error }}</p>
+  </div>
+</section>
+
+<section class="build-section" *ngIf="result">
+  <div class="container">
+
+    <div class="build-summary-bar">
+      <div class="summary-stat">
+        <span class="stat-label">Budget</span>
+        <span class="stat-value">£{{ result.budget | number:'1.0-0' }}</span>
+      </div>
+
+      <div class="summary-stat">
+        <span class="stat-label">Total cost</span>
+        <span class="stat-value accent">£{{ result.totalPrice | number:'1.2-2' }}</span>
+      </div>
+
+      <div class="summary-stat">
+        <span class="stat-label">Remaining</span>
+        <span class="stat-value" [class.positive]="savingsVsBudget >= 0" [class.over]="savingsVsBudget < 0">
+          {{ savingsVsBudget >= 0 ? '£' + (savingsVsBudget | number:'1.2-2') + ' under budget' : '£' + (-savingsVsBudget | number:'1.2-2') + ' over budget' }}
+        </span>
+      </div>
+
+      <div class="summary-stat">
+        <span class="stat-label">Compatibility</span>
+        <span class="compat-badge" [class.compatible]="result.isCompatible" [class.incompatible]="!result.isCompatible">
+          {{ result.isCompatible ? 'Compatible' : 'Review needed' }}
+        </span>
+      </div>
+    </div>
+
+    <div class="ai-summary-box" *ngIf="result.aiSummary">
+      <span class="ai-label">AI Summary</span>
+      <p class="ai-summary-text">{{ result.aiSummary }}</p>
+    </div>
+
+    <div class="warnings-box" *ngIf="hasWarnings">
+      <p class="warning-item" *ngFor="let w of result.compatibilityWarnings">
+        ⚠ {{ w }}
+      </p>
+    </div>
+
+    <div class="parts-count">
+      {{ result.parts.length }} components selected
+    </div>
+
+    <div class="parts-grid">
+      <div class="part-card" *ngFor="let part of sortedParts; let i = index" [style.animation-delay]="(i * 70) + 'ms'">
+        <div class="part-image-wrap">
+          <img
+            class="part-image"
+            [src]="part.imageUrl || '/fallback-product.svg'"
+            (error)="onImageError($event)"
+            alt="{{ part.categoryLabel }}"
+          />
+          <span class="category-badge">{{ part.categoryLabel }}</span>
+        </div>
+
+        <div class="part-body">
+          <h3 class="part-title">{{ part.title }}</h3>
+
+          <div class="part-meta">
+            <span class="spec-tag">{{ part.marketplace }}</span>
+          </div>
+
+          <div class="part-pricing">
+            <span class="part-price">£{{ part.price | number:'1.2-2' }}</span>
+            <span class="part-shipping" *ngIf="part.shippingPrice > 0">
+              +£{{ part.shippingPrice | number:'1.2-2' }} shipping
+            </span>
+            <span class="part-shipping" *ngIf="part.shippingPrice === 0">
+              Free shipping
+            </span>
+          </div>
+
+          <div class="part-actions">
+            <a
+              class="view-deal-btn"
+              [href]="part.url"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View Deal
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>

@@ -17,6 +17,8 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
     private const string Ram = "ram";
     private const string Psu = "psu";
     private const string Motherboard = "motherboard";
+    private const string Cooler = "cooler";
+    private const string Case = "case";
 
     private readonly IDbContextFactory<DealFinderDbContext> _dbContextFactory;
     private readonly ILogger<AwinFeedIngestionService> _logger;
@@ -349,6 +351,20 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
                 : null;
         }
 
+        if (CategoryContains(merchantCategory, "cases & cooling", "cooling & parts"))
+        {
+            return HasCoolerSignal(titleText) && !ContainsAny(allText, CoolerRejectWords)
+                ? Cooler
+                : null;
+        }
+
+        if (CategoryContains(merchantCategory, "cases & cooling", "cases & parts"))
+        {
+            return HasCaseSignal(titleText) && !ContainsAny(allText, CaseRejectWords)
+                ? Case
+                : null;
+        }
+
         return null;
     }
 
@@ -393,6 +409,8 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             Motherboard => ExtractMotherboardModel(text),
             Ram => ExtractRamModel(text),
             Psu => ExtractPsuModel(text),
+            Cooler => ExtractCoolerModel(text),
+            Case => ExtractCaseModel(text),
             _ => ""
         };
     }
@@ -465,6 +483,32 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         }
 
         return $"{CleanModelLabel(ddrMatch.Value)} {sizeMatch.Value.ToUpperInvariant().Replace(" ", "")}";
+    }
+
+    private static string ExtractCoolerModel(string text)
+    {
+        var aioSize = Regex.Match(text, @"\b(120|240|280|360|420)\s?mm\b", RegexOptions.IgnoreCase);
+        if (aioSize.Success)
+            return $"AIO {aioSize.Value.ToUpperInvariant().Replace(" ", "")}";
+
+        if (ContainsAny(text, ["liquid", "aio", "all-in-one", "all in one", "hydro", "kraken"]))
+            return "AIO Liquid Cooler";
+
+        return "Air Cooler";
+    }
+
+    private static string ExtractCaseModel(string text)
+    {
+        if (ContainsAny(text, ["mini-itx", "mini itx", "itx"]))
+            return "Mini-ITX Case";
+
+        if (ContainsAny(text, ["micro-atx", "micro atx", "matx", "m-atx"]))
+            return "Micro-ATX Case";
+
+        if (ContainsAny(text, ["full tower", "full-tower", "eatx", "xl-atx"]))
+            return "Full-Tower ATX Case";
+
+        return "Mid-Tower ATX Case";
     }
 
     private static string ExtractPsuModel(string text)
@@ -697,6 +741,8 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             Motherboard => $"{label} motherboard listings from retailer feeds.",
             Ram => $"{label} memory listings from retailer feeds.",
             Psu => $"{label} power supply listings from retailer feeds.",
+            Cooler => $"{label} CPU cooler listings from retailer feeds.",
+            Case => $"{label} PC case listings from retailer feeds.",
             _ => $"{label} listings from retailer feeds."
         };
     }
@@ -786,6 +832,24 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         return Regex.IsMatch(
             text,
             @"\b(ddr4|ddr5)\b",
+            RegexOptions.IgnoreCase
+        );
+    }
+
+    private static bool HasCoolerSignal(string text)
+    {
+        return Regex.IsMatch(
+            text,
+            @"\b(cpu\s?cooler|heatsink|heat\s?sink|air\s?cooler|liquid\s?cooler|water\s?cooler|tower\s?cooler|aio|all[-\s]in[-\s]one)\b",
+            RegexOptions.IgnoreCase
+        );
+    }
+
+    private static bool HasCaseSignal(string text)
+    {
+        return Regex.IsMatch(
+            text,
+            @"\b(pc\s?case|computer\s?case|gaming\s?case|tower\s?case|chassis|mid[-\s]tower|full[-\s]tower|mini[-\s]tower|atx\s?case|itx\s?case)\b",
             RegexOptions.IgnoreCase
         );
     }
@@ -922,6 +986,37 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         "microsd",
         "cfast",
         "printer"
+    ];
+
+    private static readonly string[] CoolerRejectWords =
+    [
+        "laptop",
+        "notebook",
+        "gpu cooler",
+        "graphics card cooler",
+        "vga cooler",
+        "thermal paste",
+        "thermal compound",
+        "thermal pad",
+        "fan only",
+        "replacement fan",
+        "case fan",
+        "chassis fan",
+    ];
+
+    private static readonly string[] CaseRejectWords =
+    [
+        "laptop",
+        "notebook",
+        "phone case",
+        "tablet case",
+        "carrying case",
+        "hard case",
+        "travel case",
+        "storage case",
+        "protective case",
+        "drive caddy",
+        "hdd caddy",
     ];
 
     private static readonly string[] PsuRejectWords =

@@ -28,11 +28,20 @@ public class ProductCatalogService : IProductCatalogService
                 Id = product.Id,
                 Category = product.Category,
                 Label = product.Label,
-                Description = product.Description,
 
                 ListingCount = dbContext.ProductListings.Count(listing =>
                     listing.ProductCatalogId == product.Id
-                )
+                ),
+
+                MinPrice = dbContext.ProductListings
+                    .Where(l => l.ProductCatalogId == product.Id)
+                    .Select(l => (decimal?)(l.Price + l.ShippingPrice))
+                    .Min(),
+
+                MaxPrice = dbContext.ProductListings
+                    .Where(l => l.ProductCatalogId == product.Id)
+                    .Select(l => (decimal?)(l.Price + l.ShippingPrice))
+                    .Max()
             })
             .Where(product => product.ListingCount > 0)
             .OrderBy(product => product.Category)

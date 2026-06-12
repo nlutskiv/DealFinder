@@ -1,0 +1,12 @@
+<div class="cookie-bar" *ngIf="visible" role="dialog" aria-label="Cookie consent">
+  <div class="cookie-bar-inner">
+    <p class="cookie-text">
+      We use cookies for affiliate tracking and to keep the service running.
+      By continuing you accept our
+      <a routerLink="/privacy">Privacy Policy</a>.
+    </p>
+    <div class="cookie-actions">
+      <button class="cookie-accept" type="button" (click)="accept()">Accept</button>
+    </div>
+  </div>
+</div>

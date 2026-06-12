@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 220" fill="none">
+  <rect width="280" height="220" rx="12" fill="#16161E"/>
+  <rect x="0.5" y="0.5" width="279" height="219" rx="11.5" stroke="white" stroke-opacity="0.06"/>
+  <!-- subtle grid pattern -->
+  <line x1="0" y1="110" x2="280" y2="110" stroke="white" stroke-opacity="0.03"/>
+  <line x1="140" y1="0" x2="140" y2="220" stroke="white" stroke-opacity="0.03"/>
+  <!-- box / product icon -->
+  <rect x="104" y="62" width="72" height="64" rx="8" stroke="#00f5d4" stroke-opacity="0.2" stroke-width="1.5"/>
+  <path d="M104 78 L176 78" stroke="#00f5d4" stroke-opacity="0.2" stroke-width="1.5"/>
+  <path d="M140 62 L140 78" stroke="#00f5d4" stroke-opacity="0.2" stroke-width="1.5"/>
+  <!-- inner detail lines suggesting a product -->
+  <rect x="116" y="88" width="48" height="4" rx="2" fill="#00f5d4" fill-opacity="0.1"/>
+  <rect x="120" y="98" width="40" height="3" rx="1.5" fill="white" fill-opacity="0.06"/>
+  <rect x="124" y="107" width="32" height="3" rx="1.5" fill="white" fill-opacity="0.04"/>
+  <!-- label -->
+  <text x="140" y="158" font-family="system-ui,-apple-system,sans-serif" font-size="11" fill="white" fill-opacity="0.25" text-anchor="middle" letter-spacing="0.08em">NO IMAGE</text>
+</svg>
