@@ -55,7 +55,10 @@ public class AwinFeedRefreshJob : BackgroundService
                 string.Join(", ", feeds.Select(feed => $"{feed.AdvertiserId}:{feed.AdvertiserName}"))
             );
 
-            var maxConcurrentFeeds = _config.GetValue("Awin:MaxConcurrentFeeds", 2);
+            // Sequential by default: concurrent feeds race on creating the same catalog
+            // product (unique index on SearchQuery) and the loser's whole batch rolls back.
+            // Syncs are fast enough now that concurrency buys nothing.
+            var maxConcurrentFeeds = _config.GetValue("Awin:MaxConcurrentFeeds", 1);
 
             using var semaphore = new SemaphoreSlim(maxConcurrentFeeds);
 
