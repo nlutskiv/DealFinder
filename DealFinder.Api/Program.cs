@@ -5,6 +5,7 @@ using DealFinder.Api.Providers;
 using DealFinder.Api.Services;
 using DealFinder.Api.Services.Catalog;
 using DealFinder.Api.Services.OpenAI;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 using DealFinder.Api.Services.Feed;
@@ -14,12 +15,23 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
+// Trust the X-Forwarded-For header from Railway's reverse proxy so that
+// rate limiting uses the real client IP, not the proxy's IP.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Clear known-network restrictions so we accept the header from any upstream proxy.
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 builder.Services.AddDbContextFactory<DealFinderDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")
     )
 );
 
+// Single, authoritative CORS policy — covers localhost, Vercel previews, and the custom domain.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -27,16 +39,18 @@ builder.Services.AddCors(options =>
         policy
             .SetIsOriginAllowed(origin =>
             {
-                if (string.IsNullOrWhiteSpace(origin))
+                if (string.IsNullOrWhiteSpace(origin)) return false;
+                try
                 {
-                    return false;
+                    var uri = new Uri(origin);
+                    return
+                        uri.Host == "localhost" ||
+                        uri.Host.StartsWith("localhost:") ||
+                        uri.Host.EndsWith(".vercel.app") ||
+                        uri.Host == "dealfinder.tech" ||
+                        uri.Host == "www.dealfinder.tech";
                 }
-
-                var uri = new Uri(origin);
-
-                return
-                    uri.Host == "localhost" ||
-                    uri.Host.EndsWith(".vercel.app");
+                catch { return false; }
             })
             .AllowAnyHeader()
             .AllowAnyMethod();
@@ -47,13 +61,17 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    // 40 catalogue searches per IP per 10 minutes (no AI cost, just DB)
+    // Resolve the real client IP after ForwardedHeaders middleware has run.
+    static string ClientIp(HttpContext ctx) =>
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "anon";
+
+    // 60 requests/10 min per IP for DB-only endpoints (catalog + search)
     options.AddPolicy("SearchPolicy", ctx =>
         RateLimitPartition.GetFixedWindowLimiter(
-            ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            ClientIp(ctx),
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 40,
+                PermitLimit = 60,
                 Window = TimeSpan.FromMinutes(10),
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
@@ -64,7 +82,7 @@ builder.Services.AddRateLimiter(options =>
     // 5 AI-backed PC builds per IP per 10 minutes
     options.AddPolicy("AiPolicy", ctx =>
         RateLimitPartition.GetFixedWindowLimiter(
-            ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            ClientIp(ctx),
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 5,
@@ -94,52 +112,10 @@ builder.Services.AddHttpClient("AwinFeeds", client =>
     client.Timeout = TimeSpan.FromMinutes(30);
 });
 
-
 var app = builder.Build();
 
-// Explicit CORS headers for Vercel/frontend.
-// This is intentionally before all other middleware so even successful 200 responses
-// include Access-Control-Allow-Origin.
-app.Use(async (context, next) =>
-{
-    var origin = context.Request.Headers.Origin.ToString();
-
-    if (!string.IsNullOrWhiteSpace(origin))
-    {
-        var isAllowedOrigin = false;
-
-        try
-        {
-            var originUri = new Uri(origin);
-
-            isAllowedOrigin =
-                originUri.Host == "localhost" ||
-                originUri.Host.EndsWith(".vercel.app") ||
-                originUri.Host == "dealfinder.tech" ||
-                originUri.Host == "www.dealfinder.tech";
-        }
-        catch
-        {
-            isAllowedOrigin = false;
-        }
-
-        if (isAllowedOrigin)
-        {
-            context.Response.Headers["Access-Control-Allow-Origin"] = origin;
-            context.Response.Headers["Vary"] = "Origin";
-            context.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
-            context.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
-        }
-    }
-
-    if (context.Request.Method == HttpMethods.Options)
-    {
-        context.Response.StatusCode = StatusCodes.Status204NoContent;
-        return;
-    }
-
-    await next();
-});
+// Must be first — rewrites RemoteIpAddress from X-Forwarded-For before rate limiting reads it.
+app.UseForwardedHeaders();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
@@ -156,7 +132,6 @@ app.Use(async (context, next) =>
     context.Response.Headers.TryAdd("X-Frame-Options", "DENY");
     context.Response.Headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
     context.Response.Headers.TryAdd("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
-
     await next();
 });
 

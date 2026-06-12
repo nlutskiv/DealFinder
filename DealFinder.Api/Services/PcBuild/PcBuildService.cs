@@ -155,7 +155,10 @@ public class PcBuildService : IPcBuildService
             {
                 foreach (var c in candidates)
                 {
-                    sb.AppendLine($"  [ID:{c.Id}] {c.Title} — £{c.Price:F2} (+£{c.ShippingPrice:F2} shipping) [{c.Condition}]");
+                    // Sanitise user-sourced strings to prevent prompt injection.
+                    var title = SanitiseForPrompt(c.Title);
+                    var condition = SanitiseForPrompt(c.Condition);
+                    sb.AppendLine($"  [ID:{c.Id}] {title} — £{c.Price:F2} (+£{c.ShippingPrice:F2} shipping) [{condition}]");
                 }
             }
 
@@ -182,6 +185,11 @@ public class PcBuildService : IPcBuildService
 
         return sb.ToString();
     }
+
+    private static string SanitiseForPrompt(string input) =>
+        string.IsNullOrWhiteSpace(input)
+            ? ""
+            : System.Text.RegularExpressions.Regex.Replace(input.Trim(), @"[\r\n\t]", " ");
 
     private static PcBuildResult BuildResult(
         decimal budget,

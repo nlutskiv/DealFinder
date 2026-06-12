@@ -1,6 +1,7 @@
 using DealFinder.Api.Models;
 using DealFinder.Api.Services.Catalog;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace DealFinder.Api.Controllers;
 
@@ -16,6 +17,7 @@ public class CatalogController : ControllerBase
     }
 
     [HttpGet]
+    [EnableRateLimiting("SearchPolicy")]
     public async Task<ActionResult<List<CatalogProductDto>>> GetCatalog()
     {
         var catalog = await _catalogService.GetActiveCatalogAsync();

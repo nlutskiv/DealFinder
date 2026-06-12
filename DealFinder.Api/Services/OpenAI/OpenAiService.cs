@@ -84,9 +84,8 @@ public class OpenAiService : IOpenAiService
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError(
-                "OpenAI request failed. StatusCode={StatusCode}, Body={Body}",
-                response.StatusCode,
-                responseJson
+                "OpenAI request failed. StatusCode={StatusCode}",
+                response.StatusCode
             );
 
             response.EnsureSuccessStatusCode();
@@ -163,9 +162,8 @@ public class OpenAiService : IOpenAiService
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError(
-                "OpenAI request failed. StatusCode={StatusCode}, Body={Body}",
-                response.StatusCode,
-                responseJson
+                "OpenAI request failed. StatusCode={StatusCode}",
+                response.StatusCode
             );
             response.EnsureSuccessStatusCode();
         }

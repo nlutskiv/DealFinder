@@ -139,6 +139,15 @@ public class AwinFeedRefreshJob : BackgroundService
             var ingestion = scope.ServiceProvider
                 .GetRequiredService<IAwinFeedIngestionService>();
 
+            if (!IsAllowedFeedUrl(feed.Url))
+            {
+                _logger.LogWarning(
+                    "Skipping feed with disallowed URL scheme or host. AdvertiserId={AdvertiserId}, Url={Url}",
+                    feed.AdvertiserId, feed.Url
+                );
+                return;
+            }
+
             await using var stream = await http.GetStreamAsync(feed.Url, ct);
             await using var decompressed = WrapIfCompressed(stream, feed.Url);
 
@@ -456,6 +465,18 @@ public class AwinFeedRefreshJob : BackgroundService
         }
 
         return stream;
+    }
+
+    private static bool IsAllowedFeedUrl(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
+        if (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp) return false;
+        var host = uri.Host.ToLowerInvariant();
+        // Block requests to private/loopback ranges and cloud metadata endpoints.
+        if (host == "localhost" || host == "127.0.0.1" || host == "::1") return false;
+        if (host.StartsWith("169.254.") || host.StartsWith("10.") || host.StartsWith("192.168.")) return false;
+        if (host == "metadata.google.internal" || host.EndsWith(".internal")) return false;
+        return true;
     }
 
     private static string Slug(string value)
