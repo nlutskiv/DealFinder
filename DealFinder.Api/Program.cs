@@ -1,5 +1,4 @@
 using DealFinder.Api.Data;
-using DealFinder.Api.Data.Seed;
 using DealFinder.Api.Middleware;
 using DealFinder.Api.Providers;
 using DealFinder.Api.Services;
@@ -174,7 +173,6 @@ using (var scope = app.Services.CreateScope())
     await using var dbContext = await dbFactory.CreateDbContextAsync();
 
     await dbContext.Database.MigrateAsync();
-    await ProductListingSeeder.SeedAsync(dbContext);
 }
 
 app.MapControllers();

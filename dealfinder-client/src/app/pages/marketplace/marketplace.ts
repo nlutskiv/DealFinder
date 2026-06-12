@@ -1,7 +1,7 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, ViewChild, ElementRef, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Title } from '@angular/platform-browser';
+import { Meta, Title } from '@angular/platform-browser';
 import { ProductResult } from '../../models/product-result';
 import { CatalogOption, ProductCategory } from '../../models/catalog-option';
 import { ProductSearchService } from '../../services/product-search.service';
@@ -24,6 +24,8 @@ interface CategoryTab {
   styleUrl: './marketplace.css'
 })
 export class Marketplace implements OnInit {
+  private platformId = inject(PLATFORM_ID);
+
   @ViewChild('resultsSection') resultsSection!: ElementRef;
 
   categories: CategoryTab[] = [
@@ -65,12 +67,22 @@ export class Marketplace implements OnInit {
     private catalogService: CatalogService,
     private priceHistoryService: PriceHistoryService,
     private alertService: AlertService,
-    title: Title
+    title: Title,
+    meta: Meta
   ) {
-    title.setTitle('PC Parts Marketplace | DealFinder');
+    const t = 'PC Parts Marketplace | DealFinder';
+    const d = 'Browse and compare GPU, CPU, RAM, motherboard, and storage prices across UK retailers. Set price drop alerts for any component.';
+    title.setTitle(t);
+    meta.updateTag({ name: 'description', content: d });
+    meta.updateTag({ property: 'og:title', content: t });
+    meta.updateTag({ property: 'og:description', content: d });
+    meta.updateTag({ property: 'og:url', content: 'https://www.dealfinder.tech/marketplace' });
+    meta.updateTag({ name: 'twitter:title', content: t });
+    meta.updateTag({ name: 'twitter:description', content: d });
   }
 
   ngOnInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     this.loadCatalog();
   }
 

@@ -315,6 +315,20 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             return null;
         }
 
+        // Reject rows where the category path (incl. product_type) is clearly non-PC
+        if (ContainsAny(categoryText, [
+                "audio visual",
+                "cameras & camcorders",
+                "photo & video",
+                "photographic",
+                "photo paper",
+                "camcorder",
+                "filmmaking",
+            ]))
+        {
+            return null;
+        }
+
         // PcNova category-path source of truth.
         if (CategoryContains(merchantCategory, "pc components", "processors"))
         {
@@ -346,6 +360,10 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
 
         if (CategoryContains(merchantCategory, "storage", "solid state"))
         {
+            // External/portable drives share the same category path keywords — skip them
+            if (ContainsAny(merchantCategory, ["external", "portable", "personal stock"]))
+                return null;
+
             return HasStorageSignal(titleText) && !ContainsAny(allText, StorageRejectWords)
                 ? Storage
                 : null;
@@ -368,6 +386,10 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
 
         if (CategoryContains(merchantCategory, "cases & cooling", "cases & parts"))
         {
+            // "Case Parts" = fans, filters, accessories — not actual cases
+            if (ContainsAny(merchantCategory, ["case parts"]))
+                return null;
+
             return HasCaseSignal(titleText) && !ContainsAny(allText, CaseRejectWords)
                 ? Case
                 : null;
@@ -801,31 +823,6 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             .Replace("DDR", "DDR");
     }
 
-    private static bool LooksLikeGpuCategory(string text)
-    {
-        return ContainsAny(text, ["graphics card", "graphics cards", "gpu"]);
-    }
-
-    private static bool LooksLikeCpuCategory(string text)
-    {
-        return ContainsAny(text, ["processor", "processors", "cpu"]);
-    }
-
-    private static bool LooksLikeMotherboardCategory(string text)
-    {
-        return ContainsAny(text, ["motherboard", "motherboards", "mainboard"]);
-    }
-
-    private static bool LooksLikeRamCategory(string text)
-    {
-        return ContainsAny(text, ["memory", "memory module", "memory modules", "ram"]);
-    }
-
-    private static bool LooksLikePsuCategory(string text)
-    {
-        return ContainsAny(text, ["power supply", "power supplies", "psu"]);
-    }
-
     private static bool HasGpuModel(string text)
     {
         return Regex.IsMatch(
@@ -1069,7 +1066,12 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         "sd card",
         "external hdd",
         "external ssd",
+        "external solid state",
+        "portable ssd",
+        "portable solid state",
         "portable hard",
+        "portable drive",
+        "personal stock",
     ];
 
     private static readonly string[] PsuRejectWords =

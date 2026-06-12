@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Title } from '@angular/platform-browser';
+import { Meta, Title } from '@angular/platform-browser';
 import { RankingsService, RankingItem } from '../../services/rankings.service';
 
 const CATEGORY_ORDER = ['gpu', 'cpu', 'motherboard', 'ram', 'storage', 'psu', 'case', 'cooler'];
@@ -14,6 +14,8 @@ const CATEGORY_ORDER = ['gpu', 'cpu', 'motherboard', 'ram', 'storage', 'psu', 'c
   styleUrl: './rankings.css'
 })
 export class Rankings implements OnInit {
+  private platformId = inject(PLATFORM_ID);
+
   items: RankingItem[] = [];
   loading = true;
   error = '';
@@ -31,11 +33,20 @@ export class Rankings implements OnInit {
     { key: 'cooler', label: 'Cooler' },
   ];
 
-  constructor(private rankingsService: RankingsService, title: Title) {
-    title.setTitle('Best PC Part Deals Today | DealFinder');
+  constructor(private rankingsService: RankingsService, title: Title, meta: Meta) {
+    const t = 'Best PC Part Deals Today | DealFinder';
+    const d = "Today's cheapest GPUs, CPUs, RAM, storage, and more across UK retailers — updated daily.";
+    title.setTitle(t);
+    meta.updateTag({ name: 'description', content: d });
+    meta.updateTag({ property: 'og:title', content: t });
+    meta.updateTag({ property: 'og:description', content: d });
+    meta.updateTag({ property: 'og:url', content: 'https://www.dealfinder.tech/rankings' });
+    meta.updateTag({ name: 'twitter:title', content: t });
+    meta.updateTag({ name: 'twitter:description', content: d });
   }
 
   ngOnInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     this.rankingsService.getRankings().subscribe({
       next: items => {
         this.items = [...items].sort(

@@ -1,7 +1,7 @@
 import { Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Title } from '@angular/platform-browser';
+import { Meta, Title } from '@angular/platform-browser';
 
 import { PcBuildService } from '../../services/pc-build.service';
 import { BuildsService } from '../../services/builds.service';
@@ -46,9 +46,18 @@ export class PcAssembler implements OnDestroy {
   constructor(
     private pcBuildService: PcBuildService,
     private buildsService: BuildsService,
-    title: Title
+    title: Title,
+    meta: Meta
   ) {
-    title.setTitle('PC Assembler — Build a Full PC from Your Budget | DealFinder');
+    const t = 'PC Assembler — Build a Full PC from Your Budget | DealFinder';
+    const d = 'Enter your budget and our AI picks a compatible, best-value PC build from live UK retailer listings — instantly.';
+    title.setTitle(t);
+    meta.updateTag({ name: 'description', content: d });
+    meta.updateTag({ property: 'og:title', content: t });
+    meta.updateTag({ property: 'og:description', content: d });
+    meta.updateTag({ property: 'og:url', content: 'https://www.dealfinder.tech/pc-assembler' });
+    meta.updateTag({ name: 'twitter:title', content: t });
+    meta.updateTag({ name: 'twitter:description', content: d });
   }
 
   get sortedParts(): PcBuildPart[] {

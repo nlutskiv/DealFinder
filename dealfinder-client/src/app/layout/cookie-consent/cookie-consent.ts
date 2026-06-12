@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
 const CONSENT_KEY = 'df_cookie_consent';
@@ -12,10 +12,13 @@ const CONSENT_KEY = 'df_cookie_consent';
   styleUrl: './cookie-consent.css'
 })
 export class CookieConsent implements OnInit {
+  private platformId = inject(PLATFORM_ID);
   visible = false;
 
   ngOnInit(): void {
-    this.visible = !localStorage.getItem(CONSENT_KEY);
+    if (isPlatformBrowser(this.platformId)) {
+      this.visible = !localStorage.getItem(CONSENT_KEY);
+    }
   }
 
   accept(): void {

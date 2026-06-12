@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Title } from '@angular/platform-browser';
+import { Meta, Title } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { PcBuildResult } from '../../models/pc-build';
@@ -21,9 +21,17 @@ export class BuildShare implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private http: HttpClient,
-    title: Title
+    title: Title,
+    meta: Meta
   ) {
-    title.setTitle('Shared PC Build | DealFinder');
+    const t = 'Shared PC Build | DealFinder';
+    const d = 'Check out this AI-generated PC build — compatible parts picked from live UK retailer listings.';
+    title.setTitle(t);
+    meta.updateTag({ name: 'description', content: d });
+    meta.updateTag({ property: 'og:title', content: t });
+    meta.updateTag({ property: 'og:description', content: d });
+    meta.updateTag({ name: 'twitter:title', content: t });
+    meta.updateTag({ name: 'twitter:description', content: d });
   }
 
   ngOnInit(): void {

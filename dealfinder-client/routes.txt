@@ -1,0 +1,6 @@
+/
+/about
+/contact
+/privacy
+/terms
+/sitemap
