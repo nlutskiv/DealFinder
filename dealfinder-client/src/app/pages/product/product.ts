@@ -1,4 +1,4 @@
-import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -19,6 +19,7 @@ import { AlertService } from '../../services/alert.service';
 })
 export class ProductPage implements OnInit {
   private platformId = inject(PLATFORM_ID);
+  private cdr = inject(ChangeDetectorRef);
 
   option: CatalogOption | null = null;
   results: ProductResult[] = [];
@@ -110,24 +111,37 @@ export class ProductPage implements OnInit {
         if (!option) {
           this.notFound = true;
           this.loading = false;
+          this.cdr.detectChanges();
           return;
         }
         this.option = option;
         this.setMeta(option);
         this.search(option.id);
         this.priceHistoryService.getHistory(option.id).subscribe({
-          next: pts => this.priceHistory = pts,
+          next: pts => { this.priceHistory = pts; this.cdr.detectChanges(); },
           error: () => {},
         });
       },
-      error: () => { this.error = 'Failed to load product.'; this.loading = false; }
+      error: () => {
+        this.error = 'Failed to load product.';
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
   private search(id: number): void {
     this.productSearchService.search(id).subscribe({
-      next: (data: ProductResult[]) => { this.results = data; this.loading = false; },
-      error: () => { this.error = 'Could not load listings.'; this.loading = false; }
+      next: (data: ProductResult[]) => {
+        this.results = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.error = 'Could not load listings.';
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
