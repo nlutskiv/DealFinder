@@ -6,6 +6,8 @@ import { ProductResult } from '../../models/product-result';
 import { CatalogOption, ProductCategory } from '../../models/catalog-option';
 import { ProductSearchService } from '../../services/product-search.service';
 import { CatalogService } from '../../services/catalog.service';
+import { PriceHistoryService, PricePoint } from '../../services/price-history.service';
+import { AlertService } from '../../services/alert.service';
 
 type SortOption = 'price-low' | 'price-high';
 
@@ -45,12 +47,24 @@ export class Marketplace implements OnInit {
   loadingCatalog = false;
   loading = false;
   error = '';
-
   sortBy: SortOption = 'price-low';
+
+  // Price history
+  priceHistory: PricePoint[] = [];
+  loadingHistory = false;
+
+  // Price alert
+  alertEmail = '';
+  alertTargetPrice = '';
+  alertSubmitting = false;
+  alertSuccess = false;
+  alertError = '';
 
   constructor(
     private productSearchService: ProductSearchService,
     private catalogService: CatalogService,
+    private priceHistoryService: PriceHistoryService,
+    private alertService: AlertService,
     title: Title
   ) {
     title.setTitle('PC Parts Marketplace | DealFinder');
@@ -89,13 +103,18 @@ export class Marketplace implements OnInit {
     this.selectedCategory = category;
     this.selectedOption = null;
     this.results = [];
+    this.priceHistory = [];
     this.error = '';
     this.modelSearch = '';
+    this.resetAlert();
   }
 
   selectOption(option: CatalogOption): void {
     this.selectedOption = option;
+    this.priceHistory = [];
+    this.resetAlert();
     this.searchSelectedOption();
+    this.loadPriceHistory(option.id);
   }
 
   setSort(sortBy: SortOption): void {
@@ -107,6 +126,70 @@ export class Marketplace implements OnInit {
     const lo = Math.round(option.minPrice);
     const hi = Math.round(option.maxPrice);
     return lo === hi ? `£${lo}` : `£${lo} – £${hi}`;
+  }
+
+  // ── Price history SVG ──────────────────────────────────────
+
+  get sparklinePath(): string {
+    const pts = this.priceHistory;
+    if (pts.length < 2) return '';
+    const W = 280, H = 56, PAD = 4;
+    const prices = pts.map(p => p.minPrice);
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const range = max - min || 1;
+    const coords = pts.map((p, i) => {
+      const x = PAD + (i / (pts.length - 1)) * (W - PAD * 2);
+      const y = PAD + (1 - (p.minPrice - min) / range) * (H - PAD * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    return 'M ' + coords.join(' L ');
+  }
+
+  get sparklineMin(): number {
+    return this.priceHistory.length ? Math.min(...this.priceHistory.map(p => p.minPrice)) : 0;
+  }
+
+  get sparklineMax(): number {
+    return this.priceHistory.length ? Math.max(...this.priceHistory.map(p => p.minPrice)) : 0;
+  }
+
+  get sparklineCurrent(): number {
+    return this.priceHistory.length ? this.priceHistory[this.priceHistory.length - 1].minPrice : 0;
+  }
+
+  get sparklineTrend(): 'down' | 'up' | 'flat' {
+    if (this.priceHistory.length < 2) return 'flat';
+    const first = this.priceHistory[0].minPrice;
+    const last = this.sparklineCurrent;
+    if (last < first * 0.99) return 'down';
+    if (last > first * 1.01) return 'up';
+    return 'flat';
+  }
+
+  // ── Alert ──────────────────────────────────────────────────
+
+  submitAlert(): void {
+    const email = this.alertEmail.trim();
+    const target = parseFloat(this.alertTargetPrice);
+    if (!email || isNaN(target) || target <= 0 || !this.selectedOption) return;
+
+    const currentMin = this.selectedOption.minPrice;
+    if (currentMin != null && target >= currentMin) {
+      this.alertError = `Target must be below the current low of £${Math.floor(currentMin)}.`;
+      return;
+    }
+
+    this.alertSubmitting = true;
+    this.alertError = '';
+    this.alertService.createAlert({
+      email,
+      catalogProductId: this.selectedOption.id,
+      targetPrice: target,
+    }).subscribe({
+      next: () => { this.alertSuccess = true; this.alertSubmitting = false; },
+      error: () => { this.alertError = 'Could not save alert. Try again.'; this.alertSubmitting = false; },
+    });
   }
 
   onImageError(event: Event): void {
@@ -147,5 +230,20 @@ export class Marketplace implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  private loadPriceHistory(catalogId: number): void {
+    this.loadingHistory = true;
+    this.priceHistoryService.getHistory(catalogId).subscribe({
+      next: pts => { this.priceHistory = pts; this.loadingHistory = false; },
+      error: () => { this.loadingHistory = false; },
+    });
+  }
+
+  private resetAlert(): void {
+    this.alertEmail = '';
+    this.alertTargetPrice = '';
+    this.alertSuccess = false;
+    this.alertError = '';
   }
 }

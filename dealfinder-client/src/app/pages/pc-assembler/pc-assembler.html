@@ -79,9 +79,18 @@
       </div>
     </div>
 
-    <button class="rebuild-btn" type="button" (click)="rebuild()">
-      Try a different build
-    </button>
+    <div class="build-actions-row">
+      <button class="rebuild-btn" type="button" (click)="rebuild()">
+        Try a different build
+      </button>
+
+      <div class="share-wrap">
+        <button class="share-btn" type="button" (click)="shareBuild()" [disabled]="sharing || !!shareId">
+          {{ sharing ? 'Saving...' : shareId ? '✓ Link copied' : 'Share build' }}
+        </button>
+        <span class="share-url" *ngIf="shareId">{{ shareUrl }}</span>
+      </div>
+    </div>
 
     <div class="ai-summary-box" *ngIf="result.aiSummary">
       <span class="ai-label">AI Summary</span>

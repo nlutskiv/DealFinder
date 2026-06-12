@@ -116,6 +116,52 @@
       </div>
     </div>
 
+    <!-- Price history sparkline -->
+    <div class="price-history-bar" *ngIf="priceHistory.length >= 2">
+      <div class="ph-labels">
+        <span class="ph-title">30-day price trend</span>
+        <span class="ph-stats">
+          <span class="ph-low">Low £{{ sparklineMin | number:'1.0-0' }}</span>
+          <span class="ph-high">High £{{ sparklineMax | number:'1.0-0' }}</span>
+          <span class="ph-trend ph-trend-down" *ngIf="sparklineTrend === 'down'">↓ Lower than 30 days ago</span>
+          <span class="ph-trend ph-trend-up" *ngIf="sparklineTrend === 'up'">↑ Higher than 30 days ago</span>
+          <span class="ph-trend ph-trend-flat" *ngIf="sparklineTrend === 'flat'">→ Stable</span>
+        </span>
+      </div>
+      <svg class="sparkline" viewBox="0 0 280 56" preserveAspectRatio="none">
+        <path [attr.d]="sparklinePath" fill="none" stroke="#00f5d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="ph-empty" *ngIf="!loadingHistory && priceHistory.length < 2 && selectedOption">
+      Price history will appear here after a few days of tracking.
+    </div>
+
+    <!-- Price alert -->
+    <div class="alert-box" *ngIf="selectedOption">
+      <div class="alert-box-inner" *ngIf="!alertSuccess">
+        <p class="alert-box-title">Get notified when the price drops</p>
+        <div class="alert-form">
+          <input class="alert-input" type="email" [(ngModel)]="alertEmail" placeholder="your@email.com" />
+          <div class="alert-price-wrap">
+            <span class="alert-prefix">£</span>
+            <input class="alert-input alert-price-input" type="number" [(ngModel)]="alertTargetPrice"
+              placeholder="Target price" min="1" [max]="selectedOption!.minPrice ?? null" step="any" />
+          </div>
+          <button class="alert-btn" type="button" (click)="submitAlert()"
+            [disabled]="alertSubmitting || !alertEmail || !alertTargetPrice">
+            {{ alertSubmitting ? 'Saving...' : 'Set Alert' }}
+          </button>
+        </div>
+        <p class="alert-hint" *ngIf="selectedOption!.minPrice != null">
+          Current low: £{{ selectedOption!.minPrice | number:'1.0-0' }}
+        </p>
+        <p class="alert-error" *ngIf="alertError">{{ alertError }}</p>
+      </div>
+      <div class="alert-success" *ngIf="alertSuccess">
+        ✓ Alert set. We'll email you when {{ selectedOption!.label }} drops below £{{ alertTargetPrice }}.
+      </div>
+    </div>
+
     <div class="products-grid">
       <div class="product-card" *ngFor="let product of sortedResults">
         <div class="card-image-container">
@@ -162,5 +208,6 @@
         </div>
       </div>
     </div>
+
   </div>
 </section>

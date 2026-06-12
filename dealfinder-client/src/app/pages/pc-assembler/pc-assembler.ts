@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 
 import { PcBuildService } from '../../services/pc-build.service';
+import { BuildsService } from '../../services/builds.service';
 import { PcBuildResult, PcBuildPart } from '../../models/pc-build';
 
 const CATEGORY_ORDER = ['gpu', 'cpu', 'motherboard', 'ram', 'storage', 'psu', 'case', 'cooler'];
@@ -37,10 +38,16 @@ export class PcAssembler implements OnDestroy {
   loadingStep = LOADING_STEPS[0];
   error = '';
   result: PcBuildResult | null = null;
+  shareId: string | null = null;
+  sharing = false;
 
   private stepTimers: ReturnType<typeof setTimeout>[] = [];
 
-  constructor(private pcBuildService: PcBuildService, title: Title) {
+  constructor(
+    private pcBuildService: PcBuildService,
+    private buildsService: BuildsService,
+    title: Title
+  ) {
     title.setTitle('PC Assembler — Build a Full PC from Your Budget | DealFinder');
   }
 
@@ -88,6 +95,7 @@ export class PcAssembler implements OnDestroy {
       next: result => {
         this.result = result;
         this.loading = false;
+        this.shareId = null;
         this.clearStepTimers();
         setTimeout(() => {
           this.buildSection?.nativeElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -104,6 +112,29 @@ export class PcAssembler implements OnDestroy {
   rebuild(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => this.generate(), 350);
+  }
+
+  shareBuild(): void {
+    if (!this.result || this.sharing) return;
+    this.sharing = true;
+    this.buildsService.saveBuild({
+      budget: this.result.budget,
+      totalPrice: this.result.totalPrice,
+      aiSummary: this.result.aiSummary,
+      parts: this.result.parts,
+    }).subscribe({
+      next: resp => {
+        this.shareId = resp.id;
+        this.sharing = false;
+        const url = `${window.location.origin}/build/${resp.id}`;
+        navigator.clipboard?.writeText(url).catch(() => {});
+      },
+      error: () => { this.sharing = false; },
+    });
+  }
+
+  get shareUrl(): string {
+    return this.shareId ? `${window.location.origin}/build/${this.shareId}` : '';
   }
 
   onImageError(event: Event): void {

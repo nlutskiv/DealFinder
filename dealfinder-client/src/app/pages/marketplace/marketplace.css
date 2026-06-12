@@ -166,6 +166,162 @@
   font-size: 0.85rem;
 }
 
+/* ── Price history sparkline ────────────────────────────── */
+
+.price-history-bar {
+  background: rgba(0, 245, 212, 0.04);
+  border: 1px solid rgba(0, 245, 212, 0.15);
+  border-radius: 14px;
+  padding: 16px 20px 12px;
+  margin-bottom: 24px;
+}
+
+.ph-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ph-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(0, 245, 212, 0.65);
+}
+
+.ph-stats {
+  display: flex;
+  gap: 14px;
+  font-size: 0.78rem;
+  color: rgba(180, 180, 195, 0.6);
+}
+
+.ph-low { color: #4ade80; }
+.ph-high { color: #f87171; }
+.ph-trend { font-weight: 600; }
+.ph-trend-down { color: #4ade80; }
+.ph-trend-up { color: #f87171; }
+.ph-trend-flat { color: rgba(180, 180, 195, 0.5); }
+
+.sparkline {
+  display: block;
+  width: 100%;
+  height: 56px;
+}
+
+.ph-empty {
+  font-size: 0.8rem;
+  color: rgba(180, 180, 195, 0.4);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* ── Price alert ─────────────────────────────────────────── */
+
+.alert-box {
+  margin-top: 32px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 22px 24px;
+}
+
+.alert-box-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(200, 200, 215, 0.8);
+  margin: 0 0 14px;
+}
+
+.alert-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.alert-input {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 10, 14, 0.9);
+  color: #f5f5f7;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.alert-input:focus { border-color: rgba(0, 245, 212, 0.5); }
+.alert-input[type="email"] { flex: 1; min-width: 180px; }
+
+.alert-price-wrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(10, 10, 14, 0.9);
+  overflow: hidden;
+  height: 40px;
+  transition: border-color 0.2s;
+}
+
+.alert-price-wrap:focus-within { border-color: rgba(0, 245, 212, 0.5); }
+
+.alert-prefix {
+  padding: 0 10px;
+  color: rgba(0, 245, 212, 0.7);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.alert-price-input {
+  border: none;
+  border-radius: 0;
+  height: 100%;
+  width: 110px;
+}
+
+.alert-btn {
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #00f5d4, #00c4aa);
+  color: #0a0a0e;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.alert-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.alert-btn:hover:not(:disabled) { opacity: 0.88; }
+
+.alert-hint {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.alert-error {
+  margin: 8px 0 0;
+  font-size: 0.83rem;
+  color: #f87171;
+}
+
+.alert-success {
+  font-size: 0.92rem;
+  color: #4ade80;
+  font-weight: 600;
+}
+
 /* ── Responsive ─────────────────────────────────────────── */
 
 @media (max-width: 600px) {

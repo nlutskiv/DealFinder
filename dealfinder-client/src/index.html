@@ -23,7 +23,7 @@
 
   <meta name="robots" content="index, follow">
 
-  <link rel="canonical" href="https://deal-finder-pc.vercel.app/">
+  <link rel="canonical" href="https://www.dealfinder.tech/">
 
   <meta property="og:title" content="DealFinder | AI PC Parts Deal Finder">
   <meta
@@ -31,7 +31,7 @@
     content="Compare PC parts listings and use AI-powered scoring to avoid risky used hardware."
   >
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://deal-finder-pc.vercel.app/">
+  <meta property="og:url" content="https://www.dealfinder.tech/">
   <meta property="og:site_name" content="DealFinder">
 
   <meta name="twitter:card" content="summary">
@@ -42,6 +42,50 @@
   >
 
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://www.dealfinder.tech/#website",
+        "url": "https://www.dealfinder.tech/",
+        "name": "DealFinder",
+        "description": "Compare PC parts prices across UK retailers. AI deal scoring, price alerts, and instant PC builder.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://www.dealfinder.tech/marketplace"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "WebApplication",
+        "@id": "https://www.dealfinder.tech/#app",
+        "name": "DealFinder",
+        "url": "https://www.dealfinder.tech/",
+        "applicationCategory": "ShoppingApplication",
+        "operatingSystem": "Any",
+        "description": "Compare PC parts prices across UK retailers with AI-powered deal scoring, 30-day price history, price drop alerts, and an AI PC builder.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "GBP"
+        },
+        "featureList": [
+          "Price comparison across UK retailers",
+          "AI deal scoring",
+          "30-day price history charts",
+          "Price drop email alerts",
+          "AI PC builder"
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <app-root></app-root>

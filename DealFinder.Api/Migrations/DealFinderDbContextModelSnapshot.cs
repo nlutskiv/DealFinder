@@ -193,6 +193,92 @@ namespace DealFinder.Api.Migrations
 
                     b.ToTable("ProductListings");
                 });
+
+            modelBuilder.Entity("DealFinder.Api.Models.PriceSnapshot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CatalogProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("MinPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateOnly>("RecordedDate")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CatalogProductId", "RecordedDate");
+
+                    b.ToTable("PriceSnapshots");
+                });
+
+            modelBuilder.Entity("DealFinder.Api.Models.SavedBuild", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Budget")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PartsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AiSummary")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SavedBuilds");
+                });
+
+            modelBuilder.Entity("DealFinder.Api.Models.PriceAlert", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("CatalogProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TargetPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("TriggeredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CatalogProductId", "IsActive");
+
+                    b.ToTable("PriceAlerts");
+                });
+
 #pragma warning restore 612, 618
         }
     }

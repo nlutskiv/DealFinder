@@ -13,6 +13,9 @@ public class DealFinderDbContext : DbContext
     public DbSet<AiEvaluationCache> AiEvaluationCaches => Set<AiEvaluationCache>();
     public DbSet<ProductCatalog> ProductCatalog => Set<ProductCatalog>();
     public DbSet<ProductListing> ProductListings => Set<ProductListing>();
+    public DbSet<PriceSnapshot> PriceSnapshots => Set<PriceSnapshot>();
+    public DbSet<SavedBuild> SavedBuilds => Set<SavedBuild>();
+    public DbSet<PriceAlert> PriceAlerts => Set<PriceAlert>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -49,5 +52,11 @@ public class DealFinderDbContext : DbContext
 
         modelBuilder.Entity<ProductListing>()
             .HasIndex(x => x.ProductCatalogId);
+
+        modelBuilder.Entity<PriceSnapshot>()
+            .HasIndex(x => new { x.CatalogProductId, x.RecordedDate });
+
+        modelBuilder.Entity<PriceAlert>()
+            .HasIndex(x => new { x.CatalogProductId, x.IsActive });
     }
 }

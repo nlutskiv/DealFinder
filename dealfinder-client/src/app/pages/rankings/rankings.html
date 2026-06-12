@@ -1,60 +1,100 @@
-<section class="static-page">
-  <div class="container static-page-card">
-    <h1>How rankings work</h1>
-
-    <p>
-      DealFinder pulls product listings from verified UK retailer affiliate feeds
-      and presents them ranked by total cost. Here is exactly how results are ordered
-      and filtered.
+<section class="rankings-hero">
+  <div class="container">
+    <h1 class="rankings-title">Best Deals Today</h1>
+    <p class="rankings-sub">
+      Top 5 cheapest options per component, live from retailer feeds. Sorted by total price including delivery.
     </p>
+  </div>
+</section>
+
+<section class="rankings-section">
+  <div class="container">
+
+    <div class="rankings-loading" *ngIf="loading">
+      <span class="spinner"></span>
+      <span>Loading live deals...</span>
+    </div>
+
+    <p class="error" *ngIf="error">{{ error }}</p>
+
+    <ng-container *ngIf="!loading && !error">
+      <div class="category-tabs">
+        <button
+          type="button"
+          class="category-tab"
+          *ngFor="let cat of categories"
+          [class.active]="activeCategory === cat.key"
+          (click)="activeCategory = cat.key"
+        >
+          {{ cat.label }}
+        </button>
+      </div>
+
+      <div class="rankings-empty" *ngIf="visibleItems.length === 0">
+        <p>No listings yet for this category. Check back after the next feed update.</p>
+      </div>
+
+      <div class="rankings-table" *ngIf="visibleItems.length > 0">
+        <div class="rank-row" *ngFor="let item of visibleItems; let i = index">
+          <span class="rank-number">#{{ i + 1 }}</span>
+
+          <div class="rank-image-wrap">
+            <img class="rank-image"
+              [src]="item.topListingImageUrl || '/fallback-product.svg'"
+              (error)="onImageError($event)"
+              [alt]="item.modelLabel" />
+          </div>
+
+          <div class="rank-info">
+            <p class="rank-model">{{ item.modelLabel }}</p>
+            <p class="rank-meta">{{ item.listingCount }} {{ item.listingCount === 1 ? 'listing' : 'listings' }} · {{ item.topListingMarketplace }}</p>
+          </div>
+
+          <div class="rank-price-wrap">
+            <span class="rank-price">£{{ item.minPrice | number:'1.2-2' }}</span>
+            <span class="rank-from">from</span>
+          </div>
+
+          <a class="rank-btn" [href]="item.topListingUrl" target="_blank" rel="noopener noreferrer">
+            View Deal →
+          </a>
+        </div>
+      </div>
+
+      <p class="rankings-cta-text">
+        Want to compare all listings for a model?
+        <a routerLink="/marketplace">Open Marketplace →</a>
+      </p>
+    </ng-container>
+  </div>
+</section>
+
+<section class="static-page how-it-works-section">
+  <div class="container static-page-card">
+    <h2>How rankings work</h2>
 
     <div class="info-grid">
       <div class="info-box">
         <h3>Total price (lowest first)</h3>
-        <p>
-          Listings are sorted by item price plus shipping cost, so the true
-          cheapest option always appears first.
-        </p>
+        <p>Listings are sorted by item price plus shipping cost, so the true cheapest option always appears first.</p>
       </div>
-
       <div class="info-box">
         <h3>Model match</h3>
-        <p>
-          Results are filtered to the exact component model you selected, so
-          you only see relevant listings — not similar or alternative products.
-        </p>
+        <p>Results are filtered to the exact component model you selected, so you only see relevant listings.</p>
       </div>
-
       <div class="info-box">
         <h3>Retailer feed quality</h3>
-        <p>
-          Only listings from active retailer feeds are shown. Stale or
-          unavailable listings are excluded when feeds refresh.
-        </p>
+        <p>Only listings from active retailer feeds are shown. Stale or unavailable listings are excluded when feeds refresh.</p>
       </div>
-
       <div class="info-box">
         <h3>No paid placement</h3>
-        <p>
-          Retailers cannot pay for a higher position. Rankings are determined
-          entirely by price — nothing else.
-        </p>
-      </div>
-
-      <div class="info-box">
-        <h3>AI PC Assembler</h3>
-        <p>
-          The PC Assembler uses AI to select a compatible set of parts within
-          your budget. It verifies CPU socket, RAM type and PSU wattage
-          compatibility before presenting a build.
-        </p>
+        <p>Retailers cannot pay for a higher position. Rankings are determined entirely by price — nothing else.</p>
       </div>
     </div>
 
     <p class="small-note">
-      Prices and availability are sourced from retailer feeds and may not always
-      reflect real-time stock. Always verify the final price on the retailer's site
-      before purchasing.
+      Prices and availability are sourced from retailer feeds and may not always reflect real-time stock.
+      Always verify the final price on the retailer's site before purchasing.
     </p>
   </div>
 </section>

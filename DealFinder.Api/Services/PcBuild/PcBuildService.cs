@@ -23,8 +23,18 @@ public class PcBuildService : IPcBuildService
         ["cooler"]      = (0.03m, "CPU Cooler"),
     };
 
-    private const int CandidatesNearAllocation = 8;
+    private const int CandidatePoolSize = 24;   // fetch this many, then randomly sample
+    private const int CandidatesPerCategory = 10; // how many the AI actually sees
     private const int CandidatesCheapest = 3;
+
+    private static readonly string[] BuildStyles =
+    [
+        "Prioritise raw gaming performance above all else.",
+        "Prioritise value for money — best performance per pound.",
+        "Prioritise a balanced, well-rounded build with no obvious bottlenecks.",
+        "Prioritise future-proofing — pick components that will last 4-5 years.",
+        "Prioritise a low-power, quiet, efficient build.",
+    ];
     private const decimal MinBudget = 150m;
     private const decimal MaxBudget = 20000m;
 
@@ -53,7 +63,10 @@ public class PcBuildService : IPcBuildService
             );
         }
 
-        var candidatesByCategory = await LoadCandidatesAsync(request.Budget);
+        var rng = Random.Shared;
+        var buildStyle = BuildStyles[rng.Next(BuildStyles.Length)];
+
+        var candidatesByCategory = await LoadCandidatesAsync(request.Budget, rng);
 
         if (!candidatesByCategory.Any(kv => kv.Value.Count > 0))
         {
@@ -65,12 +78,12 @@ public class PcBuildService : IPcBuildService
             };
         }
 
-        var aiResponse = await SelectCompatibleBuildAsync(request.Budget, candidatesByCategory);
+        var aiResponse = await SelectCompatibleBuildAsync(request.Budget, candidatesByCategory, buildStyle);
 
         return BuildResult(request.Budget, candidatesByCategory, aiResponse);
     }
 
-    private async Task<Dictionary<string, List<ProductListing>>> LoadCandidatesAsync(decimal budget)
+    private async Task<Dictionary<string, List<ProductListing>>> LoadCandidatesAsync(decimal budget, Random rng)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
 
@@ -79,39 +92,42 @@ public class PcBuildService : IPcBuildService
         foreach (var (category, (share, _)) in Categories)
         {
             var allocation = budget * share;
-            // Allow up to 2x the allocation so the AI can reallocate budget between categories
             var maxPrice = allocation * 2.0m;
 
-            // Listings closest to the suggested allocation
-            var nearAllocation = await db.ProductListings
+            // Fetch a larger pool sorted by price proximity, then randomly sample from it
+            var pool = await db.ProductListings
                 .Where(p =>
                     p.Category.ToLower() == category &&
                     p.Price > 0 &&
                     p.Price <= maxPrice
                 )
                 .OrderBy(p => Math.Abs((double)(p.Price - allocation)))
-                .Take(CandidatesNearAllocation)
+                .Take(CandidatePoolSize)
                 .ToListAsync();
 
-            // Also include the cheapest listings so the AI can reallocate budget to other categories
-            var nearIds = nearAllocation.Select(x => x.Id).ToHashSet();
+            // Shuffle the pool so each rebuild gets a different candidate set
+            var shuffled = pool.OrderBy(_ => rng.Next()).ToList();
+            var selected = shuffled.Take(CandidatesPerCategory).ToList();
+
+            // Always include a few cheapest options so budget reallocation is possible
+            var selectedIds = selected.Select(x => x.Id).ToHashSet();
             var cheapest = await db.ProductListings
                 .Where(p =>
                     p.Category.ToLower() == category &&
                     p.Price > 0 &&
                     p.Price <= budget &&
-                    !nearIds.Contains(p.Id)
+                    !selectedIds.Contains(p.Id)
                 )
                 .OrderBy(p => p.Price)
                 .Take(CandidatesCheapest)
                 .ToListAsync();
 
-            var combined = nearAllocation.Concat(cheapest).ToList();
+            var combined = selected.Concat(cheapest).ToList();
             result[category] = combined;
 
             _logger.LogInformation(
-                "Loaded {Count} candidates for {Category} (allocation £{Allocation:F2}, max £{Max:F2})",
-                combined.Count, category, allocation, maxPrice
+                "Loaded {Count} candidates for {Category} (pool={Pool}, allocation £{Allocation:F2})",
+                combined.Count, category, pool.Count, allocation
             );
         }
 
@@ -120,10 +136,11 @@ public class PcBuildService : IPcBuildService
 
     private async Task<PcBuildAiResponse> SelectCompatibleBuildAsync(
         decimal budget,
-        Dictionary<string, List<ProductListing>> candidatesByCategory
+        Dictionary<string, List<ProductListing>> candidatesByCategory,
+        string buildStyle
     )
     {
-        var prompt = BuildPrompt(budget, candidatesByCategory);
+        var prompt = BuildPrompt(budget, candidatesByCategory, buildStyle);
 
         _logger.LogInformation(
             "Sending PC build prompt to AI. Budget=£{Budget}, PromptLength={Length}",
@@ -146,12 +163,14 @@ public class PcBuildService : IPcBuildService
 
     private static string BuildPrompt(
         decimal budget,
-        Dictionary<string, List<ProductListing>> candidatesByCategory
+        Dictionary<string, List<ProductListing>> candidatesByCategory,
+        string buildStyle
     )
     {
         var sb = new StringBuilder();
 
         sb.AppendLine($"You are a PC building expert. Select one part per category to build a compatible PC within a £{budget:F2} total budget.");
+        sb.AppendLine($"Build priority: {buildStyle}");
         sb.AppendLine();
         sb.AppendLine("Available candidates (listing ID and price shown):");
         sb.AppendLine();

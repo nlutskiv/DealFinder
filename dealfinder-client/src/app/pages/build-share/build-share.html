@@ -1,0 +1,51 @@
+<section class="share-section">
+  <div class="container">
+    <div class="share-loading" *ngIf="loading">
+      <span class="spinner"></span>
+      <span>Loading build...</span>
+    </div>
+
+    <div class="share-error" *ngIf="!loading && error">
+      <p>{{ error }}</p>
+      <a routerLink="/pc-assembler" class="btn-primary">Build your own PC</a>
+    </div>
+
+    <div *ngIf="!loading && result">
+      <div class="share-header">
+        <h1 class="share-title">Shared PC Build</h1>
+        <p class="share-sub">Budget: £{{ result.budget | number:'1.0-0' }} · Total cost: £{{ result.totalPrice | number:'1.2-2' }}</p>
+      </div>
+
+      <div class="share-ai-box" *ngIf="result.aiSummary">
+        <span class="ai-label">AI Summary</span>
+        <p>{{ result.aiSummary }}</p>
+      </div>
+
+      <div class="share-parts-grid">
+        <div class="share-part-card" *ngFor="let part of result.parts">
+          <div class="share-part-image-wrap">
+            <img class="share-part-image"
+              [src]="part.imageUrl || '/fallback-product.svg'"
+              (error)="onImageError($event)"
+              [alt]="part.categoryLabel" />
+            <span class="category-badge">{{ part.categoryLabel }}</span>
+          </div>
+          <div class="share-part-body">
+            <h3 class="share-part-title">{{ part.title }}</h3>
+            <div class="share-part-pricing">
+              <span class="part-price">£{{ part.price | number:'1.2-2' }}</span>
+              <span class="part-shipping" *ngIf="part.shippingPrice === 0">Free shipping</span>
+              <span class="part-shipping" *ngIf="part.shippingPrice > 0">+£{{ part.shippingPrice | number:'1.2-2' }} shipping</span>
+            </div>
+            <a class="view-deal-btn" [href]="part.url" target="_blank" rel="noopener noreferrer">View Deal</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="share-cta">
+        <p>Want a build tailored to your budget?</p>
+        <a routerLink="/pc-assembler" class="btn-primary">Try PC Assembler</a>
+      </div>
+    </div>
+  </div>
+</section>

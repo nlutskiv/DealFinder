@@ -8,8 +8,12 @@ using DealFinder.Api.Services.OpenAI;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
+using DealFinder.Api.Services.Email;
 using DealFinder.Api.Services.Feed;
 using DealFinder.Api.Services.PcBuild;
+using DealFinder.Api.Services.PriceAlert;
+using DealFinder.Api.Services.PriceHistory;
+using DealFinder.Api.Services.Rankings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -92,6 +96,20 @@ builder.Services.AddRateLimiter(options =>
             }
         )
     );
+
+    // 10 price alert registrations per IP per hour
+    options.AddPolicy("AlertPolicy", ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ClientIp(ctx),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromHours(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }
+        )
+    );
 });
 
 builder.Services.AddHttpClient<IOpenAiService, OpenAiService>(client =>
@@ -111,6 +129,13 @@ builder.Services.AddHttpClient("AwinFeeds", client =>
 {
     client.Timeout = TimeSpan.FromMinutes(30);
 });
+
+builder.Services.AddScoped<IRankingsService, RankingsService>();
+
+builder.Services.AddHostedService<PriceSnapshotJob>();
+builder.Services.AddHostedService<PriceAlertCheckJob>();
+
+builder.Services.AddHttpClient<IEmailService, EmailService>();
 
 var app = builder.Build();
 
