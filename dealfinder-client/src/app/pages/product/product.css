@@ -83,3 +83,9 @@
   .pp-row { flex-wrap: wrap; }
   .pp-btn { width: 100%; text-align: center; }
 }
+
+.pp-drop-badge {
+  display: inline-block; vertical-align: middle; margin-left: 12px;
+  background: transparent; color: #2dd4bf; border: 1px solid #2dd4bf;
+  font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 6px;
+}

@@ -22,7 +22,10 @@
       </nav>
 
       <header class="pp-header">
-        <h1 class="pp-title">{{ option.label }}</h1>
+        <h1 class="pp-title">
+          {{ option.label }}
+          <span class="pp-drop-badge" *ngIf="dropPercent != null">🔥 {{ dropPercent }}% below 30-day avg</span>
+        </h1>
         <p class="pp-sub" *ngIf="bestPrice != null">
           Best UK price today:
           <span class="pp-best">£{{ bestPrice | number:'1.2-2' }}</span>

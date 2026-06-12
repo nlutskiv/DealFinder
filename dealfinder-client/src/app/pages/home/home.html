@@ -54,6 +54,24 @@
   </div>
 </section>
 
+<section class="hot-deals-section" *ngIf="hotDeals.length > 0">
+  <div class="container">
+    <h2 class="section-heading">🔥 Price drops right now</h2>
+    <p class="hot-deals-sub">Tracked prices that just fell below their 30-day average.</p>
+
+    <div class="hot-deals-grid">
+      <a class="hot-deal-card" *ngFor="let deal of hotDeals" [routerLink]="dealLink(deal)">
+        <span class="hot-deal-badge">-{{ deal.discountPercent }}%</span>
+        <span class="hot-deal-model">{{ deal.modelLabel }}</span>
+        <span class="hot-deal-prices">
+          <span class="hot-deal-now">£{{ deal.currentPrice | number:'1.0-0' }}</span>
+          <span class="hot-deal-avg">avg £{{ deal.averagePrice | number:'1.0-0' }}</span>
+        </span>
+      </a>
+    </div>
+  </div>
+</section>
+
 <section class="how-section">
   <div class="container">
     <h2 class="section-heading">How it works</h2>

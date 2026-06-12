@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
-import { isPlatformBrowser, CommonModule } from '@angular/common';
+import { isPlatformBrowser, CommonModule, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
@@ -20,6 +20,7 @@ import { AlertService } from '../../services/alert.service';
 export class ProductPage implements OnInit {
   private platformId = inject(PLATFORM_ID);
   private cdr = inject(ChangeDetectorRef);
+  private document = inject(DOCUMENT);
 
   option: CatalogOption | null = null;
   results: ProductResult[] = [];
@@ -70,6 +71,16 @@ export class ProductPage implements OnInit {
 
   get retailerCount(): number {
     return new Set(this.results.map(r => r.marketplace)).size;
+  }
+
+  // % below 30-day average, shown only when meaningful (>=5 days of history, >=5% drop)
+  get dropPercent(): number | null {
+    if (this.priceHistory.length < 5) return null;
+    const avg = this.priceHistory.reduce((s, p) => s + p.minPrice, 0) / this.priceHistory.length;
+    const cur = this.bestPrice;
+    if (cur == null || avg <= 0) return null;
+    const drop = Math.round((1 - cur / avg) * 100);
+    return drop >= 5 ? drop : null;
   }
 
   totalPrice(r: ProductResult): number {
@@ -155,5 +166,34 @@ export class ProductPage implements OnInit {
     this.meta.updateTag({ property: 'og:description', content: d });
     this.meta.updateTag({ name: 'twitter:title', content: t });
     this.meta.updateTag({ name: 'twitter:description', content: d });
+    this.setJsonLd(option);
+  }
+
+  // Product schema with live offer data — lets Google show price directly in search results.
+  private setJsonLd(option: CatalogOption): void {
+    const id = 'product-jsonld';
+    this.document.getElementById(id)?.remove();
+    if (option.minPrice == null) return;
+
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: option.label,
+      category: option.category.toUpperCase(),
+      offers: {
+        '@type': 'AggregateOffer',
+        priceCurrency: 'GBP',
+        lowPrice: option.minPrice,
+        highPrice: option.maxPrice ?? option.minPrice,
+        offerCount: option.listingCount,
+        availability: 'https://schema.org/InStock',
+      },
+    };
+
+    const script = this.document.createElement('script');
+    script.id = id;
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify(schema);
+    this.document.head.appendChild(script);
   }
 }
