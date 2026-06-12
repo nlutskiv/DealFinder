@@ -23,7 +23,8 @@ public class PcBuildService : IPcBuildService
         ["cooler"]      = (0.03m, "CPU Cooler"),
     };
 
-    private const int CandidatesPerCategory = 5;
+    private const int CandidatesNearAllocation = 8;
+    private const int CandidatesCheapest = 3;
     private const decimal MinBudget = 150m;
     private const decimal MaxBudget = 20000m;
 
@@ -81,21 +82,36 @@ public class PcBuildService : IPcBuildService
             // Allow up to 2x the allocation so the AI can reallocate budget between categories
             var maxPrice = allocation * 2.0m;
 
-            var listings = await db.ProductListings
+            // Listings closest to the suggested allocation
+            var nearAllocation = await db.ProductListings
                 .Where(p =>
                     p.Category.ToLower() == category &&
                     p.Price > 0 &&
                     p.Price <= maxPrice
                 )
                 .OrderBy(p => Math.Abs((double)(p.Price - allocation)))
-                .Take(CandidatesPerCategory)
+                .Take(CandidatesNearAllocation)
                 .ToListAsync();
 
-            result[category] = listings;
+            // Also include the cheapest listings so the AI can reallocate budget to other categories
+            var nearIds = nearAllocation.Select(x => x.Id).ToHashSet();
+            var cheapest = await db.ProductListings
+                .Where(p =>
+                    p.Category.ToLower() == category &&
+                    p.Price > 0 &&
+                    p.Price <= budget &&
+                    !nearIds.Contains(p.Id)
+                )
+                .OrderBy(p => p.Price)
+                .Take(CandidatesCheapest)
+                .ToListAsync();
+
+            var combined = nearAllocation.Concat(cheapest).ToList();
+            result[category] = combined;
 
             _logger.LogInformation(
                 "Loaded {Count} candidates for {Category} (allocation £{Allocation:F2}, max £{Max:F2})",
-                listings.Count, category, allocation, maxPrice
+                combined.Count, category, allocation, maxPrice
             );
         }
 
@@ -191,7 +207,7 @@ public class PcBuildService : IPcBuildService
             ? ""
             : System.Text.RegularExpressions.Regex.Replace(input.Trim(), @"[\r\n\t]", " ");
 
-    private static PcBuildResult BuildResult(
+    private PcBuildResult BuildResult(
         decimal budget,
         Dictionary<string, List<ProductListing>> candidatesByCategory,
         PcBuildAiResponse aiResponse
@@ -207,6 +223,10 @@ public class PcBuildService : IPcBuildService
         {
             if (!allListings.TryGetValue(listingId, out var listing))
             {
+                _logger.LogWarning(
+                    "AI selected listing ID {ListingId} for {Category} but it was not in the candidate set — skipping.",
+                    listingId, category
+                );
                 continue;
             }
 

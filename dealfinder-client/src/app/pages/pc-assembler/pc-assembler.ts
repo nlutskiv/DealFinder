@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
@@ -8,6 +8,20 @@ import { PcBuildResult, PcBuildPart } from '../../models/pc-build';
 
 const CATEGORY_ORDER = ['gpu', 'cpu', 'motherboard', 'ram', 'storage', 'psu', 'case', 'cooler'];
 
+const CATEGORY_LABELS: Record<string, string> = {
+  gpu: 'GPU', cpu: 'CPU', motherboard: 'Motherboard', ram: 'RAM',
+  storage: 'Storage', psu: 'PSU', case: 'Case', cooler: 'CPU Cooler',
+};
+
+const LOADING_STEPS = [
+  'Scanning listings...',
+  'Selecting compatible parts...',
+  'Running compatibility check...',
+  'Finalising your build...',
+];
+
+const STEP_DELAYS_MS = [4000, 10000, 20000];
+
 @Component({
   selector: 'app-pc-assembler',
   standalone: true,
@@ -15,11 +29,16 @@ const CATEGORY_ORDER = ['gpu', 'cpu', 'motherboard', 'ram', 'storage', 'psu', 'c
   templateUrl: './pc-assembler.html',
   styleUrl: './pc-assembler.css'
 })
-export class PcAssembler {
-  budget: number = 1000;
+export class PcAssembler implements OnDestroy {
+  @ViewChild('buildSection') buildSection!: ElementRef;
+
+  budget = 1000;
   loading = false;
+  loadingStep = LOADING_STEPS[0];
   error = '';
   result: PcBuildResult | null = null;
+
+  private stepTimers: ReturnType<typeof setTimeout>[] = [];
 
   constructor(private pcBuildService: PcBuildService, title: Title) {
     title.setTitle('PC Assembler — Build a Full PC from Your Budget | DealFinder');
@@ -40,29 +59,63 @@ export class PcAssembler {
     return (this.result?.compatibilityWarnings?.length ?? 0) > 0;
   }
 
+  get missingCategories(): string[] {
+    if (!this.result) return [];
+    const present = new Set(this.result.parts.map(p => p.category));
+    return CATEGORY_ORDER
+      .filter(cat => !present.has(cat))
+      .map(cat => CATEGORY_LABELS[cat] ?? cat);
+  }
+
   generate(): void {
-    if (this.budget < 150) {
-      this.error = 'Budget must be at least £150.';
+    if (this.budget < 300) {
+      this.error = 'Budget must be at least £300 for a realistic build.';
       return;
     }
 
     this.loading = true;
     this.error = '';
     this.result = null;
+    this.loadingStep = LOADING_STEPS[0];
+    this.clearStepTimers();
+
+    STEP_DELAYS_MS.forEach((delay, i) => {
+      const t = setTimeout(() => { this.loadingStep = LOADING_STEPS[i + 1]; }, delay);
+      this.stepTimers.push(t);
+    });
 
     this.pcBuildService.generateBuild(this.budget).subscribe({
       next: result => {
         this.result = result;
         this.loading = false;
+        this.clearStepTimers();
+        setTimeout(() => {
+          this.buildSection?.nativeElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
       },
       error: err => {
         this.error = err?.error?.message || 'Failed to generate build. Please try again.';
         this.loading = false;
+        this.clearStepTimers();
       }
     });
   }
 
+  rebuild(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => this.generate(), 350);
+  }
+
   onImageError(event: Event): void {
     (event.target as HTMLImageElement).src = '/fallback-product.svg';
+  }
+
+  ngOnDestroy(): void {
+    this.clearStepTimers();
+  }
+
+  private clearStepTimers(): void {
+    this.stepTimers.forEach(t => clearTimeout(t));
+    this.stepTimers = [];
   }
 }

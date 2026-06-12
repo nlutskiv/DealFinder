@@ -17,6 +17,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
     private const string Ram = "ram";
     private const string Psu = "psu";
     private const string Motherboard = "motherboard";
+    private const string Storage = "storage";
     private const string Cooler = "cooler";
     private const string Case = "case";
 
@@ -343,6 +344,13 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
                 : null;
         }
 
+        if (CategoryContains(merchantCategory, "storage", "solid state"))
+        {
+            return HasStorageSignal(titleText) && !ContainsAny(allText, StorageRejectWords)
+                ? Storage
+                : null;
+        }
+
         // PcNova dumps PSUs into "Other", so category alone is not enough.
         if (CategoryContains(merchantCategory, "pc components", "other"))
         {
@@ -408,6 +416,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             Cpu => ExtractCpuModel(text),
             Motherboard => ExtractMotherboardModel(text),
             Ram => ExtractRamModel(text),
+            Storage => ExtractStorageModel(text),
             Psu => ExtractPsuModel(text),
             Cooler => ExtractCoolerModel(text),
             Case => ExtractCaseModel(text),
@@ -483,6 +492,22 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         }
 
         return $"{CleanModelLabel(ddrMatch.Value)} {sizeMatch.Value.ToUpperInvariant().Replace(" ", "")}";
+    }
+
+    private static string ExtractStorageModel(string text)
+    {
+        var capacityMatch = Regex.Match(text, @"\b(\d+)\s?(gb|tb)\b", RegexOptions.IgnoreCase);
+        if (!capacityMatch.Success) return "";
+
+        var capacity = capacityMatch.Value.ToUpperInvariant().Replace(" ", "");
+
+        if (ContainsAny(text, ["nvme", "m.2", "pcie", "m2"]))
+            return $"{capacity} M.2 NVMe";
+
+        if (ContainsAny(text, ["sata", "2.5\""]))
+            return $"{capacity} SATA SSD";
+
+        return $"{capacity} SSD";
     }
 
     private static string ExtractCoolerModel(string text)
@@ -740,6 +765,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             Cpu => $"{label} processor listings from retailer feeds.",
             Motherboard => $"{label} motherboard listings from retailer feeds.",
             Ram => $"{label} memory listings from retailer feeds.",
+            Storage => $"{label} SSD listings from retailer feeds.",
             Psu => $"{label} power supply listings from retailer feeds.",
             Cooler => $"{label} CPU cooler listings from retailer feeds.",
             Case => $"{label} PC case listings from retailer feeds.",
@@ -850,6 +876,15 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         return Regex.IsMatch(
             text,
             @"\b(pc\s?case|computer\s?case|gaming\s?case|tower\s?case|chassis|mid[-\s]tower|full[-\s]tower|mini[-\s]tower|atx\s?case|itx\s?case)\b",
+            RegexOptions.IgnoreCase
+        );
+    }
+
+    private static bool HasStorageSignal(string text)
+    {
+        return Regex.IsMatch(
+            text,
+            @"\b(ssd|nvme|m\.2|solid\s?state|nand)\b",
             RegexOptions.IgnoreCase
         );
     }
@@ -1017,6 +1052,24 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         "protective case",
         "drive caddy",
         "hdd caddy",
+    ];
+
+    private static readonly string[] StorageRejectWords =
+    [
+        "server",
+        "nas",
+        "enterprise",
+        "optane",
+        "flash drive",
+        "usb drive",
+        "usb stick",
+        "pen drive",
+        "memory card",
+        "microsd",
+        "sd card",
+        "external hdd",
+        "external ssd",
+        "portable hard",
     ];
 
     private static readonly string[] PsuRejectWords =

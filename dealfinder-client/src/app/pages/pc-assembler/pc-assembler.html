@@ -36,13 +36,13 @@
           <span *ngIf="!loading">Build My PC</span>
           <span *ngIf="loading" class="btn-loading">
             <span class="spinner tiny-spinner"></span>
-            Assembling...
+            {{ loadingStep }}
           </span>
         </button>
       </div>
 
       <p class="budget-hint">
-        Minimum £150 · Allocates budget across GPU, CPU, Motherboard, RAM, Storage, PSU, Case, and Cooler
+        Recommended £400+ for a complete build · Usually takes 15–30 seconds
       </p>
     </div>
 
@@ -50,7 +50,7 @@
   </div>
 </section>
 
-<section class="build-section" *ngIf="result">
+<section class="build-section" *ngIf="result" #buildSection>
   <div class="container">
 
     <div class="build-summary-bar">
@@ -79,6 +79,10 @@
       </div>
     </div>
 
+    <button class="rebuild-btn" type="button" (click)="rebuild()">
+      Try a different build
+    </button>
+
     <div class="ai-summary-box" *ngIf="result.aiSummary">
       <span class="ai-label">AI Summary</span>
       <p class="ai-summary-text">{{ result.aiSummary }}</p>
@@ -90,8 +94,15 @@
       </p>
     </div>
 
+    <div class="missing-categories-box" *ngIf="missingCategories.length > 0">
+      <strong>Note:</strong> {{ missingCategories.join(', ') }}
+      {{ missingCategories.length === 1 ? 'was' : 'were' }} not available in our current listings and
+      {{ missingCategories.length === 1 ? 'has' : 'have' }} been omitted. You will need to source
+      {{ missingCategories.length === 1 ? 'this' : 'these' }} separately.
+    </div>
+
     <div class="parts-count">
-      {{ result.parts.length }} components selected
+      {{ result.parts.length }} of 8 components selected
     </div>
 
     <div class="parts-grid">
@@ -135,6 +146,16 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="next-steps-box">
+      <p class="next-steps-title">What to do next</p>
+      <ol class="next-steps-list">
+        <li>Open each "View Deal" link in a new tab and check the item is still in stock.</li>
+        <li>Add every part to your basket and proceed through checkout for each retailer separately.</li>
+        <li>Prices and availability change — verify totals match before paying.</li>
+      </ol>
+      <p class="next-steps-note">* Links are affiliate links. Prices shown are live at time of build generation.</p>
     </div>
 
   </div>

@@ -30,6 +30,7 @@ export class Marketplace implements OnInit {
     { key: 'ram', label: 'RAM' },
     { key: 'psu', label: 'PSU' },
     { key: 'motherboard', label: 'Motherboard' },
+    { key: 'storage', label: 'Storage' },
     { key: 'cooler', label: 'Cooler' },
     { key: 'case', label: 'Case' }
   ];

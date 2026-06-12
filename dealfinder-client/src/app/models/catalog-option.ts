@@ -1,4 +1,4 @@
-export type ProductCategory = 'gpu' | 'cpu' | 'ram' | 'psu' | 'motherboard' | 'cooler' | 'case';
+export type ProductCategory = 'gpu' | 'cpu' | 'ram' | 'psu' | 'motherboard' | 'cooler' | 'case' | 'storage';
 
 export interface CatalogOption {
   id: number;

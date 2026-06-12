@@ -225,6 +225,85 @@
   border: 1px solid rgba(251, 191, 36, 0.3);
 }
 
+/* ── Rebuild button ─────────────────────────────────────── */
+
+.rebuild-btn {
+  display: block;
+  margin: 0 0 20px auto;
+  padding: 8px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: rgba(200, 200, 215, 0.8);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.rebuild-btn:hover {
+  border-color: rgba(0, 245, 212, 0.5);
+  color: #00f5d4;
+}
+
+/* ── Missing categories notice ──────────────────────────── */
+
+.missing-categories-box {
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  font-size: 0.88rem;
+  color: rgba(251, 191, 36, 0.9);
+  line-height: 1.55;
+  animation: fadeSlideUp 0.3s 0.15s ease-out both;
+}
+
+.missing-categories-box strong {
+  font-weight: 700;
+}
+
+/* ── Next steps ─────────────────────────────────────────── */
+
+.next-steps-box {
+  margin-top: 32px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 24px 28px;
+  animation: fadeSlideUp 0.35s 0.3s ease-out both;
+}
+
+.next-steps-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: rgba(180, 180, 195, 0.6);
+  margin: 0 0 12px;
+}
+
+.next-steps-list {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.next-steps-list li {
+  font-size: 0.92rem;
+  color: rgba(210, 210, 225, 0.85);
+  line-height: 1.5;
+}
+
+.next-steps-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(180, 180, 195, 0.4);
+}
+
 /* ── AI summary ─────────────────────────────────────────── */
 
 .ai-summary-box {
