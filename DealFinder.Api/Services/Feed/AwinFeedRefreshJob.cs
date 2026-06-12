@@ -1,6 +1,8 @@
 using System.IO.Compression;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using DealFinder.Api.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace DealFinder.Api.Services.Feed;
 
@@ -73,11 +75,36 @@ public class AwinFeedRefreshJob : BackgroundService
 
             await Task.WhenAll(tasks);
 
+            await PruneStaleListingsAsync(ct);
+
             _logger.LogInformation("Awin feed refresh finished.");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Awin feed refresh failed.");
+        }
+    }
+
+    // Listings are upserted by URL and never re-seen once a retailer drops them from
+    // their feed (sold out, delisted, or now rejected by classification). Remove anything
+    // not seen for 48h — two full sync cycles — so one failed sync can't wipe live data.
+    private async Task PruneStaleListingsAsync(CancellationToken ct)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var dbFactory = scope.ServiceProvider
+            .GetRequiredService<IDbContextFactory<DealFinderDbContext>>();
+
+        await using var db = await dbFactory.CreateDbContextAsync(ct);
+
+        var cutoff = DateTime.UtcNow.AddHours(-48);
+
+        var removed = await db.ProductListings
+            .Where(l => l.LastSeenUtc < cutoff)
+            .ExecuteDeleteAsync(ct);
+
+        if (removed > 0)
+        {
+            _logger.LogInformation("Pruned {Count} stale listing(s) not seen since {Cutoff:u}.", removed, cutoff);
         }
     }
 

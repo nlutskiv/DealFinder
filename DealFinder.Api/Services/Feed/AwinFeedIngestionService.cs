@@ -699,6 +699,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         existing.ImageUrl = listing.ImageUrl;
         existing.Category = listing.Category;
         existing.ProductCatalogId = listing.ProductCatalogId;
+        existing.LastSeenUtc = DateTime.UtcNow;
     }
 
     private static bool IsAvailable(AwinRow row)
