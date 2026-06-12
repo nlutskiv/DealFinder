@@ -8,8 +8,8 @@ import { Meta, Title } from '@angular/platform-browser';
 })
 export class About {
   constructor(title: Title, meta: Meta) {
-    const t = 'About DealFinder | AI PC Hardware Price Intelligence';
-    const d = 'DealFinder tracks PC component prices across UK retailers, scores deals with AI, and alerts you when prices drop.';
+    const t = 'About DealFinder | UK PC Hardware Price Tracking';
+    const d = 'DealFinder tracks PC component prices across UK retailers, with 30-day price history and alerts when prices drop.';
     title.setTitle(t);
     meta.updateTag({ name: 'description', content: d });
     meta.updateTag({ property: 'og:title', content: t });

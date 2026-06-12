@@ -50,7 +50,7 @@ export class PcAssembler implements OnDestroy {
     meta: Meta
   ) {
     const t = 'PC Assembler — Build a Full PC from Your Budget | DealFinder';
-    const d = 'Enter your budget and our AI picks a compatible, best-value PC build from live UK retailer listings — instantly.';
+    const d = 'Enter your budget and get a compatible, best-value PC build picked from live UK retailer listings — instantly.';
     title.setTitle(t);
     meta.updateTag({ name: 'description', content: d });
     meta.updateTag({ property: 'og:title', content: t });

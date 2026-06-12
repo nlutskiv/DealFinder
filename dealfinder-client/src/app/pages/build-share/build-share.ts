@@ -25,7 +25,7 @@ export class BuildShare implements OnInit {
     meta: Meta
   ) {
     const t = 'Shared PC Build | DealFinder';
-    const d = 'Check out this AI-generated PC build — compatible parts picked from live UK retailer listings.';
+    const d = 'A complete PC build with compatible parts picked from live UK retailer listings.';
     title.setTitle(t);
     meta.updateTag({ name: 'description', content: d });
     meta.updateTag({ property: 'og:title', content: t });

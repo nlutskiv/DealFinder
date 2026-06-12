@@ -25,7 +25,7 @@ export class Home implements OnInit {
     meta: Meta
   ) {
     const t = 'DealFinder — Find PC Hardware Deals You Can Trust';
-    const d = 'Compare PC parts prices across UK retailers. AI deal scoring, 30-day price history, and price drop alerts — all free.';
+    const d = 'Compare PC parts prices across UK retailers. 30-day price history and price drop alerts — all free.';
     title.setTitle(t);
     meta.updateTag({ name: 'description', content: d });
     meta.updateTag({ property: 'og:title', content: t });
