@@ -59,6 +59,20 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
 
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(ct);
 
+        // Preload both tables once. Supabase round-trips are ~150ms, so per-row lookups
+        // dominate sync time — two upfront queries replace two SELECTs per imported row.
+        var catalogCache = new Dictionary<(string Category, string Label), ProductCatalog>();
+        foreach (var product in await dbContext.ProductCatalog.ToListAsync(ct))
+        {
+            catalogCache.TryAdd((product.Category, product.Label), product);
+        }
+
+        var listingCache = new Dictionary<string, ProductListing>();
+        foreach (var existingListing in await dbContext.ProductListings.ToListAsync(ct))
+        {
+            listingCache.TryAdd(existingListing.Url, existingListing);
+        }
+
         using var reader = new StreamReader(feedStream);
         using var csv = new CsvReader(reader, config);
 
@@ -80,6 +94,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
 
             var catalogProduct = await GetOrCreateCatalogProductAsync(
                 dbContext,
+                catalogCache,
                 listing.Category,
                 catalogLabel,
                 catalogDescription,
@@ -88,7 +103,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
 
             listing.ProductCatalogId = catalogProduct.Id;
 
-            await UpsertListingAsync(dbContext, listing, ct);
+            await UpsertListingAsync(dbContext, listingCache, listing, ct);
             imported++;
 
             if (imported % BatchSize == 0)
@@ -638,22 +653,15 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         };
     }
 
-    private async Task<ProductCatalog> GetOrCreateCatalogProductAsync(
+    private static async Task<ProductCatalog> GetOrCreateCatalogProductAsync(
         DealFinderDbContext dbContext,
+        Dictionary<(string Category, string Label), ProductCatalog> catalogCache,
         string category,
         string label,
         string description,
         CancellationToken ct)
     {
-        var existing = await dbContext.ProductCatalog
-            .FirstOrDefaultAsync(
-                product =>
-                    product.Category == category &&
-                    product.Label == label,
-                ct
-            );
-
-        if (existing is not null)
+        if (catalogCache.TryGetValue((category, label), out var existing))
         {
             return existing;
         }
@@ -668,25 +676,24 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         };
 
         await dbContext.ProductCatalog.AddAsync(catalogProduct, ct);
+        // Save immediately — the listing row needs this product's generated Id.
         await dbContext.SaveChangesAsync(ct);
+
+        catalogCache[(category, label)] = catalogProduct;
 
         return catalogProduct;
     }
 
     private static async Task UpsertListingAsync(
         DealFinderDbContext dbContext,
+        Dictionary<string, ProductListing> listingCache,
         ProductListing listing,
         CancellationToken ct)
     {
-        var existing = await dbContext.ProductListings
-            .FirstOrDefaultAsync(
-                product => product.Url == listing.Url,
-                ct
-            );
-
-        if (existing is null)
+        if (!listingCache.TryGetValue(listing.Url, out var existing))
         {
             await dbContext.ProductListings.AddAsync(listing, ct);
+            listingCache[listing.Url] = listing;
             return;
         }
 
