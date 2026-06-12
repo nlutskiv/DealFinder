@@ -25,7 +25,7 @@ public class OpenAiService : IOpenAiService
 
     public async Task<ListingEvaluationResult> EvaluateListingAsync(string prompt)
     {
-        var apiKey = _configuration["OpenAI:ApiKey"];
+        var apiKey = _configuration["OpenAI:ApiKey"]?.Trim();
 
         if (string.IsNullOrWhiteSpace(apiKey))
         {
@@ -124,7 +124,7 @@ public class OpenAiService : IOpenAiService
 
     public async Task<string> CompleteChatAsync(string prompt, int maxTokens = 1000)
     {
-        var apiKey = _configuration["OpenAI:ApiKey"];
+        var apiKey = _configuration["OpenAI:ApiKey"]?.Trim();
 
         if (string.IsNullOrWhiteSpace(apiKey))
         {
