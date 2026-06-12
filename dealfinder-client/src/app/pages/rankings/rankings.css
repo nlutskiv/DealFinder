@@ -176,3 +176,18 @@
   .rank-btn { padding: 8px 12px; font-size: 0.8rem; }
   .rank-price { font-size: 1rem; }
 }
+
+.rank-model-link { display: block; text-decoration: none; }
+.rank-model-link:hover { color: #38bdf8; text-decoration: underline; }
+.rank-value-badge {
+  background: #4ade80; color: #052e16; font-size: 0.6rem; font-weight: 800;
+  letter-spacing: 0.5px; padding: 1px 6px; border-radius: 4px; margin-left: 8px;
+  vertical-align: middle;
+}
+
+.rank-model-link, .rank-model-link:visited { color: inherit; }
+.rank-model-link:hover { color: #2dd4bf; }
+.rank-value-badge {
+  background: transparent; color: #2dd4bf; border: 1px solid #2dd4bf;
+  font-size: 0.6rem; font-weight: 700;
+}

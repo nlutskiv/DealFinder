@@ -11,4 +11,10 @@ public class RankingItemDto
     public string TopListingUrl { get; set; } = "";
     public string TopListingImageUrl { get; set; } = "";
     public string TopListingMarketplace { get; set; } = "";
+
+    // Relative performance index for GPU/CPU models (null for other categories).
+    public double? PerformanceScore { get; set; }
+
+    // Performance points per pound — the value-ranking key. Null when no score exists.
+    public double? ValueScore { get; set; }
 }

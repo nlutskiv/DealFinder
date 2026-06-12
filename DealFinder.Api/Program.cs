@@ -17,6 +17,7 @@ using DealFinder.Api.Services.Rankings;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddMemoryCache();
 
 // Trust the X-Forwarded-For header from Railway's reverse proxy so that
 // rate limiting uses the real client IP, not the proxy's IP.
@@ -173,6 +174,8 @@ using (var scope = app.Services.CreateScope())
     await using var dbContext = await dbFactory.CreateDbContextAsync();
 
     await dbContext.Database.MigrateAsync();
+
+    await PerformanceScoreSeeder.ApplyAsync(dbContext);
 }
 
 app.MapControllers();

@@ -13,6 +13,8 @@ export interface RankingItem {
   topListingUrl: string;
   topListingImageUrl: string;
   topListingMarketplace: string;
+  performanceScore?: number | null;
+  valueScore?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })

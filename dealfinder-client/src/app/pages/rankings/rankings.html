@@ -1,7 +1,10 @@
 <section class="rankings-hero">
   <div class="container">
     <h1 class="rankings-title">Best Deals Today</h1>
-    <p class="rankings-sub">
+    <p class="rankings-sub" *ngIf="isValueRanked">
+      GPUs and CPUs ranked by performance per pound from live UK retailer prices — not just the cheapest, the best value.
+    </p>
+    <p class="rankings-sub" *ngIf="!isValueRanked">
       Top 5 cheapest options per component, live from retailer feeds. Sorted by total price including delivery.
     </p>
   </div>
@@ -24,7 +27,7 @@
           class="category-tab"
           *ngFor="let cat of categories"
           [class.active]="activeCategory === cat.key"
-          (click)="activeCategory = cat.key"
+          (click)="selectCategory(cat.key)"
         >
           {{ cat.label }}
         </button>
@@ -46,8 +49,11 @@
           </div>
 
           <div class="rank-info">
-            <p class="rank-model">{{ item.modelLabel }}</p>
-            <p class="rank-meta">{{ item.listingCount }} {{ item.listingCount === 1 ? 'listing' : 'listings' }} · {{ item.topListingMarketplace }}</p>
+            <a class="rank-model rank-model-link" [routerLink]="productLink(item)">{{ item.modelLabel }}</a>
+            <p class="rank-meta">
+              {{ item.listingCount }} {{ item.listingCount === 1 ? 'listing' : 'listings' }} · {{ item.topListingMarketplace }}
+              <span class="rank-value-badge" *ngIf="item.valueScore != null">BEST VALUE</span>
+            </p>
           </div>
 
           <div class="rank-price-wrap">
@@ -55,8 +61,8 @@
             <span class="rank-from">from</span>
           </div>
 
-          <a class="rank-btn" [href]="item.topListingUrl" target="_blank" rel="noopener noreferrer">
-            View Deal →
+          <a class="rank-btn" [href]="item.topListingUrl" target="_blank" rel="noopener noreferrer sponsored">
+            View at {{ item.topListingMarketplace }} →
           </a>
         </div>
       </div>
@@ -75,12 +81,12 @@
 
     <div class="info-grid">
       <div class="info-box">
-        <h3>Total price (lowest first)</h3>
-        <p>Listings are sorted by item price plus shipping cost, so the true cheapest option always appears first.</p>
+        <h3>Performance per pound</h3>
+        <p>GPUs and CPUs are ranked by a relative performance index divided by the live lowest price — so the best value part wins, not the cheapest obsolete one.</p>
       </div>
       <div class="info-box">
-        <h3>Model match</h3>
-        <p>Results are filtered to the exact component model you selected, so you only see relevant listings.</p>
+        <h3>Total price (lowest first)</h3>
+        <p>Other components are sorted by item price plus shipping cost, so the true cheapest option always appears first.</p>
       </div>
       <div class="info-box">
         <h3>Retailer feed quality</h3>
@@ -88,7 +94,7 @@
       </div>
       <div class="info-box">
         <h3>No paid placement</h3>
-        <p>Retailers cannot pay for a higher position. Rankings are determined entirely by price — nothing else.</p>
+        <p>Retailers cannot pay for a higher position. Rankings are determined entirely by price and performance — nothing else.</p>
       </div>
     </div>
 

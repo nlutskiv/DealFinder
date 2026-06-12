@@ -1,0 +1,89 @@
+<section class="product-page">
+  <div class="container">
+
+    <div class="pp-loading" *ngIf="loading">
+      <span class="spinner"></span>
+      <span>Loading live prices...</span>
+    </div>
+
+    <div class="pp-notfound" *ngIf="notFound">
+      <h1>Product not found</h1>
+      <p>This product may no longer be tracked.</p>
+      <a routerLink="/marketplace" class="pp-back">Browse the Marketplace →</a>
+    </div>
+
+    <p class="error" *ngIf="error">{{ error }}</p>
+
+    <ng-container *ngIf="!loading && !notFound && option">
+      <nav class="pp-breadcrumb">
+        <a routerLink="/marketplace">Marketplace</a>
+        <span>/</span>
+        <span class="pp-crumb-cat">{{ option.category.toUpperCase() }}</span>
+      </nav>
+
+      <header class="pp-header">
+        <h1 class="pp-title">{{ option.label }}</h1>
+        <p class="pp-sub" *ngIf="bestPrice != null">
+          Best UK price today:
+          <span class="pp-best">£{{ bestPrice | number:'1.2-2' }}</span>
+          across {{ retailerCount }} {{ retailerCount === 1 ? 'retailer' : 'retailers' }}
+          · {{ results.length }} {{ results.length === 1 ? 'listing' : 'listings' }}
+        </p>
+      </header>
+
+      <div class="pp-listings" *ngIf="sortedResults.length > 0">
+        <div class="pp-row" *ngFor="let r of sortedResults; let i = index" [class.pp-row-best]="i === 0">
+          <span class="pp-best-badge" *ngIf="i === 0">BEST PRICE</span>
+
+          <div class="pp-img-wrap">
+            <img class="pp-img" [src]="r.imageUrl || '/fallback-product.svg'" (error)="onImageError($event)" [alt]="r.title" />
+          </div>
+
+          <div class="pp-info">
+            <p class="pp-listing-title">{{ r.title }}</p>
+            <p class="pp-listing-meta">
+              {{ r.marketplace }}
+              <span class="pp-condition">{{ r.condition }}</span>
+              <span *ngIf="r.shippingPrice > 0"> · +£{{ r.shippingPrice | number:'1.2-2' }} shipping</span>
+              <span *ngIf="r.shippingPrice === 0"> · Free shipping</span>
+            </p>
+          </div>
+
+          <div class="pp-price-wrap">
+            <span class="pp-price">£{{ totalPrice(r) | number:'1.2-2' }}</span>
+            <span class="pp-total-label">total</span>
+          </div>
+
+          <a class="pp-btn" [href]="r.url" target="_blank" rel="noopener noreferrer sponsored">
+            View at {{ r.marketplace }} →
+          </a>
+        </div>
+      </div>
+
+      <div class="pp-empty" *ngIf="sortedResults.length === 0 && !error">
+        <p>No live listings right now. Check back after the next feed refresh.</p>
+      </div>
+
+      <!-- Price alert -->
+      <div class="pp-alert" *ngIf="sortedResults.length > 0">
+        <h2 class="pp-alert-title">Get notified when the price drops</h2>
+        <p class="pp-alert-sub" *ngIf="bestPrice != null">Current low: £{{ bestPrice | number:'1.0-0' }}</p>
+
+        <div class="pp-alert-form" *ngIf="!alertSuccess">
+          <input type="email" placeholder="your@email.com" [(ngModel)]="alertEmail" class="pp-alert-input" />
+          <input type="number" placeholder="Target £" [(ngModel)]="alertTargetPrice" [max]="bestPrice ?? null" class="pp-alert-input pp-alert-price" />
+          <button class="pp-alert-btn" (click)="submitAlert()" [disabled]="alertSubmitting">
+            {{ alertSubmitting ? 'Saving...' : 'Set Alert' }}
+          </button>
+        </div>
+        <p class="pp-alert-success" *ngIf="alertSuccess">✓ Alert saved — we'll email you when the price drops below your target.</p>
+        <p class="pp-alert-error" *ngIf="alertError">{{ alertError }}</p>
+      </div>
+
+      <p class="pp-disclosure">
+        Links are affiliate links — DealFinder may earn a commission at no extra cost to you.
+        Always verify the final price on the retailer's site.
+      </p>
+    </ng-container>
+  </div>
+</section>

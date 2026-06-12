@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "https://dealfinder-production-b05b.up.railway.app/api/sitemap.xml"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

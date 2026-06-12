@@ -23,16 +23,19 @@ public class PriceHistoryController : ControllerBase
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
 
+        // TakeLast is not translatable to SQL — take newest 30 descending, then restore order.
         var points = await db.PriceSnapshots
             .Where(s => s.CatalogProductId == catalogId)
-            .OrderBy(s => s.RecordedDate)
-            .TakeLast(30)
+            .OrderByDescending(s => s.RecordedDate)
+            .Take(30)
             .Select(s => new PriceHistoryPointDto
             {
                 Date = s.RecordedDate.ToString("yyyy-MM-dd"),
                 MinPrice = s.MinPrice
             })
             .ToListAsync();
+
+        points.Reverse();
 
         return Ok(points);
     }

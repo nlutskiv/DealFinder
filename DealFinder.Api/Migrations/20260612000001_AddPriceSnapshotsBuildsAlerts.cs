@@ -1,4 +1,7 @@
 using System;
+using DealFinder.Api.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -6,6 +9,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace DealFinder.Api.Migrations
 {
+    [DbContext(typeof(DealFinderDbContext))]
+    [Migration("20260612000001_AddPriceSnapshotsBuildsAlerts")]
     public partial class AddPriceSnapshotsBuildsAlerts : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

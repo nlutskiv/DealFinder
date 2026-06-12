@@ -17,22 +17,40 @@
       <a class="btn-secondary" routerLink="/pc-assembler">Build a PC</a>
     </div>
 
-    <div class="hero-stats">
+    <div class="hero-stats" *ngIf="stats; else staticStats">
       <div class="hero-stat">
-        <span class="hero-stat-value">7</span>
-        <span class="hero-stat-label">categories</span>
+        <span class="hero-stat-value">{{ stats.listingCount | number }}</span>
+        <span class="hero-stat-label">live listings</span>
       </div>
       <div class="hero-stat-divider"></div>
       <div class="hero-stat">
-        <span class="hero-stat-value">New</span>
-        <span class="hero-stat-label">retail only</span>
+        <span class="hero-stat-value">{{ stats.retailerCount }}</span>
+        <span class="hero-stat-label">UK retailers</span>
       </div>
       <div class="hero-stat-divider"></div>
-      <div class="hero-stat">
-        <span class="hero-stat-value">100%</span>
-        <span class="hero-stat-label">independent rankings</span>
+      <div class="hero-stat" *ngIf="updatedAgo">
+        <span class="hero-stat-value">{{ updatedAgo }}</span>
+        <span class="hero-stat-label">last updated</span>
       </div>
     </div>
+    <ng-template #staticStats>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <span class="hero-stat-value">7</span>
+          <span class="hero-stat-label">categories</span>
+        </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <span class="hero-stat-value">New</span>
+          <span class="hero-stat-label">retail only</span>
+        </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <span class="hero-stat-value">100%</span>
+          <span class="hero-stat-label">independent rankings</span>
+        </div>
+      </div>
+    </ng-template>
   </div>
 </section>
 
