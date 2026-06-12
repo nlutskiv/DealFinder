@@ -78,7 +78,7 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddHttpClient<IOpenAiService, OpenAiService>(client =>
 {
-    client.Timeout = TimeSpan.FromSeconds(20);
+    client.Timeout = TimeSpan.FromSeconds(90);
 });
 
 builder.Services.AddScoped<IProductProvider, DbProductProvider>();

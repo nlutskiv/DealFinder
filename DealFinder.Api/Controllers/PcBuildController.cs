@@ -29,8 +29,20 @@ public class PcBuildController : ControllerBase
 
         _logger.LogInformation("PC build request received. Budget=£{Budget}", request.Budget);
 
-        var result = await _pcBuildService.GenerateBuildAsync(request);
-
-        return Ok(result);
+        try
+        {
+            var result = await _pcBuildService.GenerateBuildAsync(request);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("API key"))
+        {
+            _logger.LogError("OpenAI API key is not configured.");
+            return StatusCode(503, new { message = "AI service is not configured. Contact support." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "PC build generation failed.");
+            return StatusCode(500, new { message = ex.Message });
+        }
     }
 }
