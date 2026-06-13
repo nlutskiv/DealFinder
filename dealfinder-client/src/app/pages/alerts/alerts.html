@@ -1,0 +1,106 @@
+<section class="alerts-section">
+  <div class="container">
+    <div class="alerts-header">
+      <p class="alerts-eyebrow">Price tracking</p>
+      <h1 class="alerts-title">Your price alerts</h1>
+      <p class="alerts-subtitle">
+        Enter the email you used when setting an alert to see and manage your active notifications.
+      </p>
+    </div>
+
+    <div class="lookup-panel">
+      <div class="lookup-form">
+        <div class="lookup-input-wrap">
+          <svg class="lookup-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M2.5 6.5l7.5 5 7.5-5M2.5 6.5v7a1 1 0 001 1h13a1 1 0 001-1v-7M2.5 6.5A1 1 0 013.5 5.5h13a1 1 0 011 1"/>
+          </svg>
+          <input
+            class="lookup-input"
+            type="email"
+            [(ngModel)]="email"
+            placeholder="your@email.com"
+            (keydown.enter)="lookup()"
+          />
+        </div>
+        <button class="lookup-btn" type="button" (click)="lookup()" [disabled]="loading || !email">
+          <span *ngIf="!loading">Find my alerts</span>
+          <span *ngIf="loading" class="btn-loading">
+            <span class="spinner tiny-spinner"></span>
+            Searching...
+          </span>
+        </button>
+      </div>
+      <p class="lookup-hint">We only match by email — no password needed.</p>
+    </div>
+
+    <p class="lookup-error" *ngIf="error">{{ error }}</p>
+
+    <!-- No alerts state -->
+    <div class="alerts-empty" *ngIf="looked && alerts.length === 0">
+      <div class="alerts-empty-icon">🔔</div>
+      <p class="alerts-empty-title">No active alerts for this email</p>
+      <p class="alerts-empty-sub">
+        Set a price alert on the <a routerLink="/marketplace">Deals page</a> by selecting a product and entering a target price.
+      </p>
+    </div>
+
+    <!-- Alert list -->
+    <div class="alerts-list" *ngIf="alerts.length > 0">
+      <p class="alerts-list-count">{{ alerts.length }} active {{ alerts.length === 1 ? 'alert' : 'alerts' }}</p>
+
+      <div class="alert-row" *ngFor="let a of alerts">
+        <div class="alert-row-left">
+          <span class="alert-row-cat">{{ categoryLabel(a.category) }}</span>
+          <div class="alert-row-info">
+            <p class="alert-row-name">{{ a.productName }}</p>
+            <p class="alert-row-date">Set {{ a.createdAtUtc | date:'d MMM yyyy' }}</p>
+          </div>
+        </div>
+        <div class="alert-row-right">
+          <div class="alert-row-target">
+            <span class="alert-row-label">Alert below</span>
+            <span class="alert-row-price">£{{ a.targetPrice | number:'1.0-0' }}</span>
+          </div>
+          <button
+            class="alert-row-delete"
+            type="button"
+            (click)="delete(a.id)"
+            [disabled]="deletingId === a.id"
+            title="Remove alert"
+          >
+            {{ deletingId === a.id ? '...' : '✕' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="how-it-works" *ngIf="!looked">
+      <p class="how-title">How price alerts work</p>
+      <div class="how-steps">
+        <div class="how-step">
+          <span class="how-step-num">1</span>
+          <div>
+            <p class="how-step-label">Find a product</p>
+            <p class="how-step-desc">Browse deals on the <a routerLink="/marketplace">Deals page</a> and select the model you want to track.</p>
+          </div>
+        </div>
+        <div class="how-step">
+          <span class="how-step-num">2</span>
+          <div>
+            <p class="how-step-label">Set your target price</p>
+            <p class="how-step-desc">Enter your email and the price you'd like to pay. We only alert when the price drops below it.</p>
+          </div>
+        </div>
+        <div class="how-step">
+          <span class="how-step-num">3</span>
+          <div>
+            <p class="how-step-label">Get notified</p>
+            <p class="how-step-desc">We check prices every 15 minutes. When the price drops, you get a single email with a direct link.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>

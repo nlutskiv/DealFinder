@@ -1,43 +1,50 @@
-﻿<footer class="site-footer">
+<footer class="site-footer">
   <div class="container footer-content">
-    <div class="footer-brand">
-      <a class="footer-logo" routerLink="/">DealFinder</a>
-      <p class="footer-tagline">
-        Live PC hardware prices from UK retailers. Independent rankings, no pay-to-play.
-      </p>
-    </div>
+    <div class="footer-grid">
 
-    <div class="footer-cols">
+      <div class="footer-brand">
+        <a class="footer-logo" routerLink="/">
+          <span class="footer-logo-badge">df</span>
+          <span class="footer-logo-text">DealFinder</span>
+        </a>
+        <p class="footer-tagline">
+          Independent PC component price tracking. Live UK retailer prices, no pay-to-play.
+        </p>
+      </div>
+
       <div class="footer-col">
-        <p class="footer-col-heading">Platform</p>
-        <a routerLink="/marketplace">Marketplace</a>
-        <a routerLink="/pc-assembler">PC Assembler</a>
-        <a routerLink="/rankings">Best Deals</a>
+        <p class="footer-col-heading">Browse</p>
+        <a routerLink="/marketplace" [queryParams]="{cat:'gpu'}">Graphics cards</a>
+        <a routerLink="/marketplace" [queryParams]="{cat:'cpu'}">Processors</a>
+        <a routerLink="/marketplace" [queryParams]="{cat:'ram'}">Memory</a>
+        <a routerLink="/marketplace" [queryParams]="{cat:'storage'}">Storage</a>
+        <a routerLink="/marketplace">All categories</a>
+      </div>
+
+      <div class="footer-col">
+        <p class="footer-col-heading">Tools</p>
+        <a routerLink="/marketplace">Price history</a>
+        <a routerLink="/pc-assembler">Build calculator</a>
+        <a routerLink="/marketplace" title="Coming soon">Price alerts</a>
+        <a routerLink="/about">About the data</a>
       </div>
 
       <div class="footer-col">
         <p class="footer-col-heading">Company</p>
         <a routerLink="/about">About</a>
+        <a routerLink="/about">How we track prices</a>
         <a routerLink="/contact">Contact</a>
+        <a routerLink="/privacy">Privacy</a>
       </div>
 
-      <div class="footer-col">
-        <p class="footer-col-heading">Legal</p>
-        <a routerLink="/privacy">Privacy Policy</a>
-        <a routerLink="/terms">Terms of Use</a>
-        <a routerLink="/sitemap">Sitemap</a>
-      </div>
     </div>
 
     <div class="footer-bottom">
       <p class="footer-disclosure">
         DealFinder participates in the Awin affiliate programme and may earn a commission
-        when you click product links and make a purchase. This does not affect the price
-        you pay and does not influence product rankings.
+        when you click product links and make a purchase. This does not affect rankings.
       </p>
-      <p class="footer-copy">
-        &copy; 2026 DealFinder &middot; England &amp; Wales
-      </p>
+      <p class="footer-copy">&copy; 2026 DealFinder. All prices in GBP.</p>
     </div>
   </div>
 </footer>

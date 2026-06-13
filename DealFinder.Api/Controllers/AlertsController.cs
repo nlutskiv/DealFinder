@@ -17,6 +17,53 @@ public class AlertsController : ControllerBase
         _dbFactory = dbFactory;
     }
 
+    [HttpGet]
+    [EnableRateLimiting("AlertPolicy")]
+    public async Task<IActionResult> GetAlerts([FromQuery] string email)
+    {
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
+            return BadRequest(new { message = "A valid email address is required." });
+
+        await using var db = await _dbFactory.CreateDbContextAsync();
+
+        var alerts = await db.PriceAlerts
+            .Where(a => a.Email == email && a.IsActive)
+            .Join(db.ProductCatalog,
+                a => a.CatalogProductId,
+                c => c.Id,
+                (a, c) => new AlertDto
+                {
+                    Id = a.Id,
+                    ProductName = c.Label,
+                    Category = c.Category,
+                    TargetPrice = a.TargetPrice,
+                    CreatedAtUtc = a.CreatedAtUtc
+                })
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .ToListAsync();
+
+        return Ok(alerts);
+    }
+
+    [HttpDelete("{id}")]
+    [EnableRateLimiting("AlertPolicy")]
+    public async Task<IActionResult> DeleteAlert(int id, [FromQuery] string email)
+    {
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
+            return BadRequest(new { message = "A valid email address is required." });
+
+        await using var db = await _dbFactory.CreateDbContextAsync();
+
+        var alert = await db.PriceAlerts.FirstOrDefaultAsync(a => a.Id == id && a.Email == email && a.IsActive);
+        if (alert is null)
+            return NotFound();
+
+        alert.IsActive = false;
+        await db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     [HttpPost]
     [EnableRateLimiting("AlertPolicy")]
     public async Task<IActionResult> CreateAlert([FromBody] CreateAlertRequest request)
@@ -67,4 +114,13 @@ public class CreateAlertRequest
     public string Email { get; set; } = "";
     public int CatalogProductId { get; set; }
     public decimal TargetPrice { get; set; }
+}
+
+public class AlertDto
+{
+    public int Id { get; set; }
+    public string ProductName { get; set; } = "";
+    public string Category { get; set; } = "";
+    public decimal TargetPrice { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
 }

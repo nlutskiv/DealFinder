@@ -71,6 +71,15 @@ export class PcAssembler implements OnDestroy {
     return this.result ? this.result.budget - this.result.totalPrice : 0;
   }
 
+  get budgetPercent(): number {
+    if (!this.result) return 0;
+    return Math.min(100, (this.result.totalPrice / this.result.budget) * 100);
+  }
+
+  setPreset(value: number): void {
+    this.budget = value;
+  }
+
   get hasWarnings(): boolean {
     return (this.result?.compatibilityWarnings?.length ?? 0) > 0;
   }

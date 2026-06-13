@@ -6,13 +6,13 @@
   gap: 12px;
   justify-content: center;
   padding: 80px 0;
-  color: rgba(180,180,195,0.7);
+  color: var(--color-text-muted);
 }
 
 .share-error {
   text-align: center;
   padding: 80px 0;
-  color: rgba(180,180,195,0.7);
+  color: var(--color-text-muted);
 }
 
 .share-header {
@@ -27,13 +27,13 @@
 }
 
 .share-sub {
-  color: rgba(180,180,195,0.7);
+  color: var(--color-text-muted);
   margin: 0;
 }
 
 .share-ai-box {
-  background: rgba(0, 245, 212, 0.05);
-  border: 1px solid rgba(0, 245, 212, 0.2);
+  background: var(--color-primary-muted);
+  border: 1px solid var(--color-primary);
   border-radius: 14px;
   padding: 20px 24px;
   margin-bottom: 28px;
@@ -44,12 +44,12 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(0, 245, 212, 0.7);
+  color: var(--color-primary);
   display: block;
   margin-bottom: 8px;
 }
 
-.share-ai-box p { margin: 0; color: rgba(220,220,235,0.9); line-height: 1.65; }
+.share-ai-box p { margin: 0; color: var(--color-text-secondary); line-height: 1.65; }
 
 .share-parts-grid {
   display: grid;
@@ -59,8 +59,8 @@
 }
 
 .share-part-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: 18px;
   overflow: hidden;
   display: flex;
@@ -70,7 +70,7 @@
 .share-part-image-wrap {
   position: relative;
   height: 160px;
-  background: rgba(255,255,255,0.03);
+  background: var(--color-bg-elevated);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -81,9 +81,9 @@
 .category-badge {
   position: absolute;
   top: 10px; left: 10px;
-  background: rgba(0,245,212,0.15);
-  color: #00f5d4;
-  border: 1px solid rgba(0,245,212,0.3);
+  background: var(--color-primary-muted);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 700;
@@ -112,37 +112,43 @@
 }
 
 .share-part-pricing { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.part-price { font-size: 1.3rem; font-weight: 700; color: #00f5d4; }
-.part-shipping { font-size: 0.8rem; color: rgba(180,180,195,0.6); }
+.part-price { font-size: 1.3rem; font-weight: 700; color: var(--color-primary); }
+.part-shipping { font-size: 0.8rem; color: var(--color-text-muted); }
 
 .view-deal-btn {
   display: block;
   text-align: center;
   padding: 9px 16px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #00f5d4, #00c4aa);
-  color: #0a0a0e;
+  background: var(--color-primary);
+  color: #fff;
   font-weight: 700;
   font-size: 0.87rem;
   text-decoration: none;
   margin-top: auto;
+  transition: opacity 0.2s;
 }
+
+.view-deal-btn:hover { opacity: 0.88; }
 
 .share-cta {
   text-align: center;
   padding: 32px 0 0;
-  border-top: 1px solid rgba(255,255,255,0.07);
+  border-top: 1px solid var(--color-border);
 }
 
-.share-cta p { color: rgba(180,180,195,0.7); margin: 0 0 16px; }
+.share-cta p { color: var(--color-text-muted); margin: 0 0 16px; }
 
 .btn-primary {
   display: inline-block;
   padding: 12px 28px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #00f5d4, #00c4aa);
-  color: #0a0a0e;
+  background: var(--color-primary);
+  color: #fff;
   font-weight: 700;
   font-size: 0.95rem;
   text-decoration: none;
+  transition: opacity 0.2s;
 }
+
+.btn-primary:hover { opacity: 0.88; }

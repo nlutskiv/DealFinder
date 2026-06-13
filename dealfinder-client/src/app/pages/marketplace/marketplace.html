@@ -1,9 +1,10 @@
 <section class="search-section">
   <div class="container">
     <div class="search-header">
-      <h1 class="search-title">PC Parts Marketplace</h1>
+      <p class="search-eyebrow">UK live prices</p>
+      <h1 class="search-title">PC component deals</h1>
       <p class="search-subtitle">
-        Compare prices across UK retailers. Select a component to see live listings.
+        Live prices from UK retailers. Pick a category and model to compare listings.
       </p>
     </div>
 
@@ -87,57 +88,10 @@
   </div>
 </section>
 
-<section class="products-section" *ngIf="results.length > 0" #resultsSection>
+<!-- Price alert — shown between search and results when a model is selected -->
+<div class="alert-section-wrap" *ngIf="selectedOption">
   <div class="container">
-    <div class="listings-header">
-      <div class="listings-header-left">
-        <h2 class="section-title">{{ selectedOption?.label }}</h2>
-        <span class="results-count">{{ sortedResults.length }} {{ listingWord(sortedResults.length) }}</span>
-      </div>
-
-      <div class="sort-control">
-        <button
-          type="button"
-          class="sort-pill"
-          [class.active]="sortBy === 'price-low'"
-          (click)="setSort('price-low')"
-        >
-          Price: Low to High
-        </button>
-
-        <button
-          type="button"
-          class="sort-pill"
-          [class.active]="sortBy === 'price-high'"
-          (click)="setSort('price-high')"
-        >
-          Price: High to Low
-        </button>
-      </div>
-    </div>
-
-    <!-- Price history sparkline -->
-    <div class="price-history-bar" *ngIf="priceHistory.length >= 2">
-      <div class="ph-labels">
-        <span class="ph-title">30-day price trend</span>
-        <span class="ph-stats">
-          <span class="ph-low">Low £{{ sparklineMin | number:'1.0-0' }}</span>
-          <span class="ph-high">High £{{ sparklineMax | number:'1.0-0' }}</span>
-          <span class="ph-trend ph-trend-down" *ngIf="sparklineTrend === 'down'">↓ Lower than 30 days ago</span>
-          <span class="ph-trend ph-trend-up" *ngIf="sparklineTrend === 'up'">↑ Higher than 30 days ago</span>
-          <span class="ph-trend ph-trend-flat" *ngIf="sparklineTrend === 'flat'">→ Stable</span>
-        </span>
-      </div>
-      <svg class="sparkline" viewBox="0 0 280 56" preserveAspectRatio="none">
-        <path [attr.d]="sparklinePath" fill="none" stroke="#00f5d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <div class="ph-empty" *ngIf="!loadingHistory && priceHistory.length < 2 && selectedOption">
-      Price history will appear here after a few days of tracking.
-    </div>
-
-    <!-- Price alert -->
-    <div class="alert-box" *ngIf="selectedOption">
+    <div class="alert-box">
       <div class="alert-box-inner" *ngIf="!alertSuccess">
         <p class="alert-box-title">Get notified when the price drops</p>
         <div class="alert-form">
@@ -161,50 +115,98 @@
         ✓ Alert set. We'll email you when {{ selectedOption!.label }} drops below £{{ alertTargetPrice }}.
       </div>
     </div>
+  </div>
+</div>
 
-    <div class="products-grid">
-      <div class="product-card" *ngFor="let product of sortedResults">
-        <div class="card-image-container">
+<section class="products-section" *ngIf="results.length > 0" #resultsSection>
+  <div class="container">
+    <div class="listings-header">
+      <div class="listings-header-left">
+        <h2 class="section-title">{{ selectedOption?.label }}</h2>
+        <span class="results-count">{{ sortedResults.length }} {{ listingWord(sortedResults.length) }}</span>
+      </div>
+
+      <div class="listings-header-right">
+        <p class="refresh-note">Prices refreshed every 15 min</p>
+        <div class="sort-control">
+          <button
+            type="button"
+            class="sort-pill"
+            [class.active]="sortBy === 'price-low'"
+            (click)="setSort('price-low')"
+          >
+            Price: Low to High
+          </button>
+
+          <button
+            type="button"
+            class="sort-pill"
+            [class.active]="sortBy === 'price-high'"
+            (click)="setSort('price-high')"
+          >
+            Price: High to Low
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Price history sparkline — only shown with at least 7 data points -->
+    <div class="price-history-bar" *ngIf="priceHistory.length >= 7">
+      <div class="ph-labels">
+        <span class="ph-title">30-day price trend</span>
+        <span class="ph-stats">
+          <span class="ph-low">Low £{{ sparklineMin | number:'1.0-0' }}</span>
+          <span class="ph-high">High £{{ sparklineMax | number:'1.0-0' }}</span>
+          <span class="ph-trend ph-trend-down" *ngIf="sparklineTrend === 'down'">↓ Lower than 30 days ago</span>
+          <span class="ph-trend ph-trend-up" *ngIf="sparklineTrend === 'up'">↑ Higher than 30 days ago</span>
+          <span class="ph-trend ph-trend-flat" *ngIf="sparklineTrend === 'flat'">→ Stable</span>
+        </span>
+      </div>
+      <svg class="sparkline" viewBox="0 0 280 56" preserveAspectRatio="none">
+        <path [attr.d]="sparklinePath" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="ph-empty" *ngIf="!loadingHistory && priceHistory.length < 7 && selectedOption">
+      Price history will appear here after a few days of tracking.
+    </div>
+
+    <!-- Deal rows -->
+    <div class="deal-list">
+      <div class="deal-row" *ngFor="let product of sortedResults">
+        <div class="deal-row-image-wrap">
           <img
-            class="card-image"
+            class="deal-row-image"
             [src]="product.imageUrl || '/fallback-product.svg'"
             (error)="onImageError($event)"
             [alt]="product.title"
           />
         </div>
 
-        <div class="card-content">
-          <div class="card-main">
-            <div class="card-header">
-              <h3 class="product-name">{{ product.title }}</h3>
-              <p class="product-seller">{{ product.marketplace }}</p>
-            </div>
+        <div class="deal-row-info">
+          <p class="deal-row-name">{{ product.title }}</p>
+          <p class="deal-row-meta">
+            {{ product.marketplace }}
+            <span class="deal-row-dot">·</span>
+            <span class="shipping-tag free" *ngIf="product.shippingPrice === 0">Free delivery</span>
+            <span class="shipping-tag" *ngIf="product.shippingPrice > 0">+£{{ product.shippingPrice | number:'1.2-2' }} shipping</span>
+            <span class="deal-row-dot" *ngIf="product.shippingPrice > 0">·</span>
+            <span class="deal-row-total-label" *ngIf="product.shippingPrice > 0">£{{ (product.price + product.shippingPrice) | number:'1.2-2' }} total</span>
+          </p>
+        </div>
 
-            <div class="card-pricing">
-              <span class="current-price">£{{ product.price | number:'1.2-2' }}</span>
-              <span class="shipping-tag" *ngIf="product.shippingPrice > 0">
-                +£{{ product.shippingPrice | number:'1.2-2' }} shipping
-              </span>
-              <span class="shipping-tag free" *ngIf="product.shippingPrice === 0">
-                Free delivery
-              </span>
-            </div>
-
-            <div class="card-specs">
-              <span class="spec-tag new-badge">New</span>
-            </div>
+        <div class="deal-row-right">
+          <div class="deal-row-pricing">
+            <span class="deal-row-price">£{{ product.price | number:'1.2-2' }}</span>
+            <span class="deal-row-new-badge">new</span>
           </div>
-
-          <div class="card-footer">
-            <a
-              class="view-deal-btn"
-              [href]="product.url"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View Deal →
-            </a>
-          </div>
+          <a
+            class="deal-row-btn"
+            [href]="product.url"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View deal →
+          </a>
         </div>
       </div>
     </div>

@@ -63,3 +63,8 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Large archives
+*.rar
+*.zip
+*.7z

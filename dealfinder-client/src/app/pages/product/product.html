@@ -34,6 +34,22 @@
         </p>
       </header>
 
+      <!-- Price alert — above listings -->
+      <div class="pp-alert" *ngIf="sortedResults.length > 0">
+        <h2 class="pp-alert-title">Get notified when the price drops</h2>
+        <p class="pp-alert-sub" *ngIf="bestPrice != null">Current low: £{{ bestPrice | number:'1.0-0' }}</p>
+
+        <div class="pp-alert-form" *ngIf="!alertSuccess">
+          <input type="email" placeholder="your@email.com" [(ngModel)]="alertEmail" class="pp-alert-input" />
+          <input type="number" placeholder="Target £" [(ngModel)]="alertTargetPrice" [max]="bestPrice ?? null" class="pp-alert-input pp-alert-price" />
+          <button class="pp-alert-btn" (click)="submitAlert()" [disabled]="alertSubmitting">
+            {{ alertSubmitting ? 'Saving...' : 'Set Alert' }}
+          </button>
+        </div>
+        <p class="pp-alert-success" *ngIf="alertSuccess">✓ Alert saved — we'll email you when the price drops below your target.</p>
+        <p class="pp-alert-error" *ngIf="alertError">{{ alertError }}</p>
+      </div>
+
       <div class="pp-listings" *ngIf="sortedResults.length > 0">
         <div class="pp-row" *ngFor="let r of sortedResults; let i = index" [class.pp-row-best]="i === 0">
           <span class="pp-best-badge" *ngIf="i === 0">BEST PRICE</span>
@@ -65,22 +81,6 @@
 
       <div class="pp-empty" *ngIf="sortedResults.length === 0 && !error">
         <p>No live listings right now. Check back after the next feed refresh.</p>
-      </div>
-
-      <!-- Price alert -->
-      <div class="pp-alert" *ngIf="sortedResults.length > 0">
-        <h2 class="pp-alert-title">Get notified when the price drops</h2>
-        <p class="pp-alert-sub" *ngIf="bestPrice != null">Current low: £{{ bestPrice | number:'1.0-0' }}</p>
-
-        <div class="pp-alert-form" *ngIf="!alertSuccess">
-          <input type="email" placeholder="your@email.com" [(ngModel)]="alertEmail" class="pp-alert-input" />
-          <input type="number" placeholder="Target £" [(ngModel)]="alertTargetPrice" [max]="bestPrice ?? null" class="pp-alert-input pp-alert-price" />
-          <button class="pp-alert-btn" (click)="submitAlert()" [disabled]="alertSubmitting">
-            {{ alertSubmitting ? 'Saving...' : 'Set Alert' }}
-          </button>
-        </div>
-        <p class="pp-alert-success" *ngIf="alertSuccess">✓ Alert saved — we'll email you when the price drops below your target.</p>
-        <p class="pp-alert-error" *ngIf="alertError">{{ alertError }}</p>
       </div>
 
       <p class="pp-disclosure">

@@ -1,4 +1,4 @@
-import { Component, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
@@ -12,8 +12,10 @@ import { DealsService, HotDeal } from '../../services/deals.service';
   templateUrl: './home.html',
   styleUrl: './home.css'
 })
-export class Home implements OnInit {
+export class Home implements OnInit, OnDestroy {
   private platformId = inject(PLATFORM_ID);
+  private el = inject(ElementRef);
+  private observer: IntersectionObserver | null = null;
 
   stats: SiteStats | null = null;
   hotDeals: HotDeal[] = [];
@@ -45,6 +47,28 @@ export class Home implements OnInit {
       next: d => this.hotDeals = d,
       error: () => {},
     });
+    this.initScrollReveal();
+  }
+
+  ngOnDestroy(): void {
+    this.observer?.disconnect();
+  }
+
+  private initScrollReveal(): void {
+    this.observer = new IntersectionObserver(
+      entries => entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('is-visible');
+          this.observer!.unobserve(e.target);
+        }
+      }),
+      { threshold: 0.12 }
+    );
+    setTimeout(() => {
+      this.el.nativeElement
+        .querySelectorAll('.scroll-section')
+        .forEach((s: Element) => this.observer!.observe(s));
+    }, 0);
   }
 
   dealLink(deal: HotDeal): string[] {

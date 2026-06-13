@@ -1,17 +1,18 @@
 <section class="assembler-section">
   <div class="container">
     <div class="assembler-header">
-      <h1 class="assembler-title">PC Assembler</h1>
+      <p class="assembler-eyebrow">Build calculator</p>
+      <h1 class="assembler-title">Set a budget, get a compatible build</h1>
       <p class="assembler-subtitle">
-        Enter your budget and we'll pick the best compatible build from live listings.
-        Socket, memory and power compatibility are checked automatically.
+        We pick the best in-stock parts at today's UK prices, then check socket,
+        memory and power compatibility for you. No upsells, no affiliate reshuffling.
       </p>
     </div>
 
     <div class="budget-panel">
       <div class="budget-input-row">
         <div class="budget-field">
-          <label class="budget-label" for="budget">Budget</label>
+          <label class="budget-label" for="budget">Your budget</label>
           <div class="budget-input-wrap">
             <span class="budget-prefix">£</span>
             <input
@@ -33,7 +34,7 @@
           (click)="generate()"
           [disabled]="loading"
         >
-          <span *ngIf="!loading">Build My PC</span>
+          <span *ngIf="!loading">Build my PC →</span>
           <span *ngIf="loading" class="btn-loading">
             <span class="spinner tiny-spinner"></span>
             {{ loadingStep }}
@@ -41,9 +42,16 @@
         </button>
       </div>
 
-      <p class="budget-hint">
-        Recommended £400+ for a complete build · Usually takes 15–30 seconds
-      </p>
+      <!-- Budget quick-pick presets -->
+      <div class="budget-presets">
+        <span class="budget-presets-label">Quick picks:</span>
+        <button class="preset-pill" type="button" (click)="setPreset(500)"  [class.active]="budget === 500">£500</button>
+        <button class="preset-pill" type="button" (click)="setPreset(800)"  [class.active]="budget === 800">£800</button>
+        <button class="preset-pill" type="button" (click)="setPreset(1200)" [class.active]="budget === 1200">£1,200</button>
+        <button class="preset-pill" type="button" (click)="setPreset(1800)" [class.active]="budget === 1800">£1,800</button>
+        <button class="preset-pill" type="button" (click)="setPreset(2500)" [class.active]="budget === 2500">£2,500</button>
+      </div>
+
     </div>
 
     <p class="error" *ngIf="error">{{ error }}</p>
@@ -53,114 +61,103 @@
 <section class="build-section" *ngIf="result" #buildSection>
   <div class="container">
 
-    <div class="build-summary-bar">
-      <div class="summary-stat">
-        <span class="stat-label">Budget</span>
-        <span class="stat-value">£{{ result.budget | number:'1.0-0' }}</span>
-      </div>
-
-      <div class="summary-stat">
-        <span class="stat-label">Total cost</span>
-        <span class="stat-value accent">£{{ result.totalPrice | number:'1.2-2' }}</span>
-      </div>
-
-      <div class="summary-stat">
-        <span class="stat-label">Remaining</span>
-        <span class="stat-value" [class.positive]="savingsVsBudget >= 0" [class.over]="savingsVsBudget < 0">
-          {{ savingsVsBudget >= 0 ? '£' + (savingsVsBudget | number:'1.2-2') + ' under budget' : '£' + (-savingsVsBudget | number:'1.2-2') + ' over budget' }}
-        </span>
-      </div>
-
-      <div class="summary-stat">
-        <span class="stat-label">Compatibility</span>
-        <span class="compat-badge" [class.compatible]="result.isCompatible" [class.incompatible]="!result.isCompatible">
-          {{ result.isCompatible ? 'Compatible' : 'Review needed' }}
-        </span>
-      </div>
-    </div>
-
-    <div class="build-actions-row">
-      <button class="rebuild-btn" type="button" (click)="rebuild()">
-        Try a different build
-      </button>
-
-      <div class="share-wrap">
-        <button class="share-btn" type="button" (click)="shareBuild()" [disabled]="sharing || !!shareId">
-          {{ sharing ? 'Saving...' : shareId ? '✓ Link copied' : 'Share build' }}
-        </button>
-        <span class="share-url" *ngIf="shareId">{{ shareUrl }}</span>
-      </div>
-    </div>
-
     <div class="ai-summary-box" *ngIf="result.aiSummary">
       <span class="ai-label">Build notes</span>
       <p class="ai-summary-text">{{ result.aiSummary }}</p>
     </div>
 
     <div class="warnings-box" *ngIf="hasWarnings">
-      <p class="warning-item" *ngFor="let w of result.compatibilityWarnings">
-        ⚠ {{ w }}
-      </p>
+      <p class="warning-item" *ngFor="let w of result.compatibilityWarnings">⚠ {{ w }}</p>
     </div>
 
     <div class="missing-categories-box" *ngIf="missingCategories.length > 0">
       <strong>Note:</strong> {{ missingCategories.join(', ') }}
       {{ missingCategories.length === 1 ? 'was' : 'were' }} not available in our current listings and
-      {{ missingCategories.length === 1 ? 'has' : 'have' }} been omitted. You will need to source
-      {{ missingCategories.length === 1 ? 'this' : 'these' }} separately.
+      {{ missingCategories.length === 1 ? 'has' : 'have' }} been omitted.
     </div>
 
-    <div class="parts-count">
-      {{ result.parts.length }} of 8 components selected
-    </div>
+    <!-- Two-column layout: parts list + sidebar -->
+    <div class="build-layout">
 
-    <div class="parts-grid">
-      <div class="part-card" *ngFor="let part of sortedParts; let i = index" [style.animation-delay]="(i * 70) + 'ms'">
-        <div class="part-image-wrap">
-          <img
-            class="part-image"
-            [src]="part.imageUrl || '/fallback-product.svg'"
-            (error)="onImageError($event)"
-            alt="{{ part.categoryLabel }}"
-          />
-          <span class="category-badge">{{ part.categoryLabel }}</span>
+      <!-- Parts list -->
+      <div class="parts-list-wrap">
+        <div class="parts-list-header">
+          <span class="parts-list-title">Recommended build</span>
+          <span class="parts-list-count">{{ result.parts.length }} of 8 parts</span>
         </div>
 
-        <div class="part-body">
-          <h3 class="part-title">{{ part.title }}</h3>
-
-          <div class="part-meta">
-            <span class="spec-tag">{{ part.marketplace }}</span>
-          </div>
-
-          <div class="part-pricing">
-            <span class="part-price">£{{ part.price | number:'1.2-2' }}</span>
-            <span class="part-shipping" *ngIf="part.shippingPrice > 0">
-              +£{{ part.shippingPrice | number:'1.2-2' }} shipping
-            </span>
-            <span class="part-shipping" *ngIf="part.shippingPrice === 0">
-              Free shipping
-            </span>
-          </div>
-
-          <div class="part-actions">
-            <a
-              class="view-deal-btn"
-              [href]="part.url"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View Deal
-            </a>
-          </div>
-        </div>
+        <ul class="parts-list">
+          <li class="part-row" *ngFor="let part of sortedParts; let i = index" [style.animation-delay]="(i * 50) + 'ms'">
+            <div class="part-row-img-wrap">
+              <img *ngIf="part.imageUrl" class="part-row-img" [src]="part.imageUrl" (error)="onImageError($event)" [alt]="part.title" />
+              <span *ngIf="!part.imageUrl" class="part-row-icon">{{ part.categoryLabel[0] }}</span>
+            </div>
+            <div class="part-row-info">
+              <div class="part-row-top">
+                <span class="part-row-cat">{{ part.categoryLabel }}</span>
+              </div>
+              <p class="part-row-name">{{ part.title }}</p>
+              <p class="part-row-retailer">{{ part.marketplace }}
+                <span class="part-row-shipping" *ngIf="part.shippingPrice === 0"> · Free delivery</span>
+                <span class="part-row-shipping" *ngIf="part.shippingPrice > 0"> · +£{{ part.shippingPrice | number:'1.2-2' }} delivery</span>
+              </p>
+            </div>
+            <div class="part-row-right">
+              <span class="part-row-price">£{{ part.price | number:'1.2-2' }}</span>
+              <a class="part-row-link" [href]="part.url" target="_blank" rel="noopener noreferrer">View →</a>
+            </div>
+          </li>
+        </ul>
       </div>
+
+      <!-- Sidebar -->
+      <aside class="build-sidebar">
+
+        <!-- Budget summary card -->
+        <div class="sidebar-card">
+          <div class="sidebar-total-row">
+            <span class="sidebar-label">Total</span>
+            <span class="sidebar-total-value">£{{ result.totalPrice | number:'1.2-2' }}</span>
+          </div>
+          <div class="sidebar-budget-vs">
+            <span class="sidebar-label">vs budget £{{ result.budget | number:'1.0-0' }}</span>
+            <span class="sidebar-savings" [class.over]="savingsVsBudget < 0">
+              {{ savingsVsBudget >= 0 ? '£' + (savingsVsBudget | number:'1.0-0') + ' under' : '£' + (-savingsVsBudget | number:'1.0-0') + ' over' }}
+            </span>
+          </div>
+          <div class="sidebar-budget-bar">
+            <div class="sidebar-budget-fill" [style.width]="budgetPercent + '%'"></div>
+          </div>
+
+          <div class="sidebar-compat-row">
+            <span class="sidebar-label">Compatibility</span>
+            <span class="compat-badge" [class.compatible]="result.isCompatible" [class.incompatible]="!result.isCompatible">
+              {{ result.isCompatible ? 'Compatible' : 'Review needed' }}
+            </span>
+          </div>
+
+          <button class="rebuild-btn sidebar-rebuild" type="button" (click)="rebuild()">
+            Try a different build
+          </button>
+        </div>
+
+        <!-- Share card -->
+        <div class="sidebar-card">
+          <div class="share-wrap">
+            <button class="share-btn" type="button" (click)="shareBuild()" [disabled]="sharing || !!shareId">
+              {{ sharing ? 'Saving...' : shareId ? '✓ Link copied' : 'Share this build' }}
+            </button>
+            <span class="share-url" *ngIf="shareId">{{ shareUrl }}</span>
+          </div>
+        </div>
+
+      </aside>
     </div>
 
     <div class="next-steps-box">
       <p class="next-steps-title">What to do next</p>
       <ol class="next-steps-list">
-        <li>Open each "View Deal" link in a new tab and check the item is still in stock.</li>
+        <li>Open each "View →" link in a new tab and check the item is still in stock.</li>
         <li>Add every part to your basket and proceed through checkout for each retailer separately.</li>
         <li>Prices and availability change — verify totals match before paying.</li>
       </ol>
