@@ -484,19 +484,15 @@ html.dark .page-orbs {
   .stat-cell { padding: 12px 14px; }
   .stat-cell dd { font-size: 1.2rem; }
   .hero-cta { margin-bottom: 32px; }
-  .hot-deals-section { padding: 36px 0; }
   .how-section, .features-section, .trust-section, .cta-section { padding: 48px 0; }
   .section-heading { margin-bottom: 24px; font-size: 1.4rem; }
   .cta-box { padding: 28px 18px; }
-  .hot-deals-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .hot-deal-card { padding: 12px; }
-  .hot-deal-now { font-size: 1rem; }
 }
 
 .hot-deals-section { padding: 48px 0; border-top: 1px solid var(--color-border); }
 .hot-deals-sub { color: var(--color-text-muted); margin: -8px 0 24px; }
 .hot-deals-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px;
 }
 .hot-deal-card {
   display: flex; flex-direction: column; gap: 6px;
@@ -513,3 +509,10 @@ html.dark .page-orbs {
 .hot-deal-prices { display: flex; align-items: baseline; gap: 8px; }
 .hot-deal-now { color: var(--color-primary); font-weight: 800; font-size: 1.2rem; }
 .hot-deal-avg { color: var(--color-text-muted); font-size: 0.8rem; text-decoration: line-through; }
+
+@media (max-width: 640px) {
+  .hot-deals-section { padding: 36px 0; }
+  .hot-deals-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .hot-deal-card { padding: 12px; }
+  .hot-deal-now { font-size: 1rem; }
+}
