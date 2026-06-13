@@ -7,7 +7,7 @@ namespace DealFinder.Api.Services.Rankings;
 
 public class RankingsService : IRankingsService
 {
-    private const string CacheKey = "rankings:v2";
+    private const string CacheKey = "rankings:v3";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(15);
 
     private static readonly Dictionary<string, string> CategoryLabels = new(StringComparer.OrdinalIgnoreCase)
@@ -69,8 +69,6 @@ public class RankingsService : IRankingsService
                         .Count(l => l.ProductCatalogId == c.Id && l.Price > 0),
                 })
                 .Where(x => x.MinPrice != null)
-                .OrderBy(x => x.MinPrice)
-                .Take(40)
                 .ToListAsync();
 
             var candidates = rows

@@ -33,6 +33,19 @@
         </button>
       </div>
 
+      <div class="price-filter-row">
+        <span class="price-filter-label">Min price:</span>
+        <div class="price-filter-pills">
+          <button
+            type="button"
+            class="price-pill"
+            *ngFor="let p of pricePresets"
+            [class.active]="minPrice === p.value"
+            (click)="minPrice = p.value"
+          >{{ p.label }}</button>
+        </div>
+      </div>
+
       <div class="rankings-empty" *ngIf="visibleItems.length === 0">
         <p>No listings yet for this category. Check back after the next feed update.</p>
       </div>

@@ -56,6 +56,16 @@ export class Rankings implements OnInit {
   error = '';
 
   activeCategory = 'gpu';
+  minPrice = 0;
+
+  readonly pricePresets = [
+    { label: 'Any', value: 0 },
+    { label: '£20+', value: 20 },
+    { label: '£50+', value: 50 },
+    { label: '£100+', value: 100 },
+    { label: '£200+', value: 200 },
+    { label: '£500+', value: 500 },
+  ];
 
   readonly categories = [
     { key: 'gpu', label: 'GPU' },
@@ -99,11 +109,14 @@ export class Rankings implements OnInit {
 
   selectCategory(key: string): void {
     this.activeCategory = key;
+    this.minPrice = 0;
     this.router.navigate(['/rankings', key]);
   }
 
   get visibleItems(): RankingItem[] {
-    return this.items.filter(i => i.category === this.activeCategory);
+    return this.items.filter(i =>
+      i.category === this.activeCategory && i.minPrice >= this.minPrice
+    );
   }
 
   get isValueRanked(): boolean {

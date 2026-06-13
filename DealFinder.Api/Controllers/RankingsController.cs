@@ -20,7 +20,7 @@ public class RankingsController : ControllerBase
     [EnableRateLimiting("SearchPolicy")]
     public async Task<ActionResult<List<RankingItemDto>>> GetRankings()
     {
-        var rankings = await _rankingsService.GetTopDealsAsync(perCategory: 5);
+        var rankings = await _rankingsService.GetTopDealsAsync(perCategory: 20);
         return Ok(rankings);
     }
 }
