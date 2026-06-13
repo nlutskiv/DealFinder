@@ -44,7 +44,15 @@ export class Home implements OnInit, OnDestroy {
       error: () => {},
     });
     this.dealsService.getHotDeals().subscribe({
-      next: d => this.hotDeals = d,
+      next: d => {
+        this.hotDeals = d;
+        // Section is conditionally rendered — observe it once data lands
+        setTimeout(() => {
+          this.el.nativeElement
+            .querySelectorAll('.scroll-section:not(.is-visible)')
+            .forEach((s: Element) => this.observer?.observe(s));
+        }, 0);
+      },
       error: () => {},
     });
     this.initScrollReveal();
