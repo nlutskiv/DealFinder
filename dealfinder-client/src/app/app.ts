@@ -22,19 +22,21 @@ export class App implements OnInit {
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
-    // Keep the canonical tag in sync with the current route — a single static
-    // canonical pointing at the homepage tells Google every page is a duplicate of it.
+    this.setCanonical(this.router.url);
+
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
-      .subscribe(e => {
-        const path = e.urlAfterRedirects.split('?')[0].split('#')[0];
-        let link = this.document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-        if (!link) {
-          link = this.document.createElement('link');
-          link.setAttribute('rel', 'canonical');
-          this.document.head.appendChild(link);
-        }
-        link.setAttribute('href', `https://www.dealfinder.tech${path === '/' ? '/' : path}`);
-      });
+      .subscribe(e => this.setCanonical(e.urlAfterRedirects));
+  }
+
+  private setCanonical(url: string): void {
+    const path = url.split('?')[0].split('#')[0] || '/';
+    let link = this.document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!link) {
+      link = this.document.createElement('link');
+      link.setAttribute('rel', 'canonical');
+      this.document.head.appendChild(link);
+    }
+    link.setAttribute('href', `https://www.dealfinder.tech${path}`);
   }
 }
