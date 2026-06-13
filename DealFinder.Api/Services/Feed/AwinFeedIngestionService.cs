@@ -410,6 +410,40 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
                 : null;
         }
 
+        // Love Tech Hate Waste (and any retailer using "Computing > X" paths).
+        // Title signal used as a secondary filter within each matched category
+        // to exclude capture cards, external drives, etc. from the GPU/Storage buckets.
+        if (CategoryContains(merchantCategory, "computing", "graphics"))
+        {
+            return HasGpuModel(titleText) && !ContainsAny(allText, GpuRejectWords)
+                ? Gpu
+                : null;
+        }
+
+        if (CategoryContains(merchantCategory, "computing", "processors"))
+        {
+            return HasCpuModel(titleText) && !ContainsAny(allText, CpuRejectWords)
+                ? Cpu
+                : null;
+        }
+
+        if (CategoryContains(merchantCategory, "computing", "internal memory"))
+        {
+            return HasRamSignal(titleText) && !ContainsAny(allText, RamRejectWords)
+                ? Ram
+                : null;
+        }
+
+        if (CategoryContains(merchantCategory, "computing", "data storage"))
+        {
+            if (ContainsAny(merchantCategory, ["external", "portable", "usb"]))
+                return null;
+
+            return HasStorageSignal(titleText) && !ContainsAny(allText, StorageRejectWords)
+                ? Storage
+                : null;
+        }
+
         return null;
     }
 
