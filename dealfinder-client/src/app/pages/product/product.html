@@ -46,7 +46,7 @@
             {{ alertSubmitting ? 'Saving...' : 'Set Alert' }}
           </button>
         </div>
-        <p class="pp-alert-success" *ngIf="alertSuccess">✓ Alert saved — we'll email you when the price drops below your target.</p>
+        <p class="pp-alert-success" *ngIf="alertSuccess">Alert saved. We'll email you when the price drops below your target.</p>
         <p class="pp-alert-error" *ngIf="alertError">{{ alertError }}</p>
       </div>
 
@@ -84,8 +84,8 @@
       </div>
 
       <p class="pp-disclosure">
-        Links are affiliate links — DealFinder may earn a commission at no extra cost to you.
-        Always verify the final price on the retailer's site.
+        Affiliate links. DealFinder may earn a commission at no extra cost to you.
+        Always check the final price on the retailer's site.
       </p>
     </ng-container>
   </div>
