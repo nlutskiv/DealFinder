@@ -1,0 +1,31 @@
+<section class="blog-hero">
+  <div class="container">
+    <p class="blog-eyebrow">DealFinder Blog</p>
+    <h1 class="blog-hero-title">PC hardware guides &amp; deal tips</h1>
+    <p class="blog-hero-sub">Buying guides, price analysis, and everything you need to get the best deal on UK PC parts.</p>
+  </div>
+</section>
+
+<section class="blog-list-section">
+  <div class="container blog-grid" *ngIf="posts.length > 0">
+    <a
+      class="blog-card"
+      *ngFor="let post of posts"
+      [routerLink]="['/blog', post.slug]"
+    >
+      <div class="blog-card-meta">
+        <span class="blog-card-category">{{ post.category }}</span>
+        <span class="blog-card-dot">·</span>
+        <span class="blog-card-date">{{ post.date | date:'d MMM yyyy' }}</span>
+        <span class="blog-card-dot">·</span>
+        <span class="blog-card-read">{{ post.readTime }} min read</span>
+      </div>
+      <h2 class="blog-card-title">{{ post.title }}</h2>
+      <p class="blog-card-excerpt">{{ post.excerpt }}</p>
+      <span class="blog-card-cta">Read article →</span>
+    </a>
+  </div>
+  <div class="container blog-empty" *ngIf="posts.length === 0">
+    <p>Articles coming soon.</p>
+  </div>
+</section>

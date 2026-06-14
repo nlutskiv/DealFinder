@@ -13,6 +13,8 @@ import { PcAssembler } from './pages/pc-assembler/pc-assembler';
 import { NotFound } from './pages/not-found/not-found';
 import { BuildShare } from './pages/build-share/build-share';
 import { ProductPage } from './pages/product/product';
+import { BlogList } from './pages/blog/blog-list';
+import { BlogPostPage } from './pages/blog/blog-post';
 
 export const routes: Routes = [
   { path: '', component: Home },
@@ -24,6 +26,8 @@ export const routes: Routes = [
   { path: 'rankings/:category', component: Rankings },
   { path: 'product/:id', component: ProductPage },
   { path: 'product/:id/:slug', component: ProductPage },
+  { path: 'blog', component: BlogList },
+  { path: 'blog/:slug', component: BlogPostPage },
   { path: 'privacy', component: Privacy },
   { path: 'contact', component: Contact },
   { path: 'terms', component: Terms },

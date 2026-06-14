@@ -128,6 +128,26 @@
   color: var(--color-safe);
 }
 
+.retailer-caution-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+  cursor: default;
+}
+
+html.dark .retailer-caution-badge {
+  background: #451a03;
+  border-color: #92400e;
+  color: #fbbf24;
+}
+
 .new-badge {
   background: var(--color-safe-bg);
   color: var(--color-safe);

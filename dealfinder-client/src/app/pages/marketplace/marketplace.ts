@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Meta, Title } from '@angular/platform-browser';
 import { ProductResult } from '../../models/product-result';
 import { CatalogOption, ProductCategory } from '../../models/catalog-option';
+import { retailerTrust, TrustLevel } from '../../models/retailer-trust';
 import { ProductSearchService } from '../../services/product-search.service';
 import { CatalogService } from '../../services/catalog.service';
 import { PriceHistoryService, PricePoint } from '../../services/price-history.service';
@@ -50,6 +51,7 @@ export class Marketplace implements OnInit {
   loading = false;
   error = '';
   sortBy: SortOption = 'price-low';
+  hideRisky = false;
 
   // Price history
   priceHistory: PricePoint[] = [];
@@ -98,9 +100,17 @@ export class Marketplace implements OnInit {
   }
 
   get sortedResults(): ProductResult[] {
-    return [...this.results].sort((a, b) =>
+    let list = this.results;
+    if (this.hideRisky) {
+      list = list.filter(r => this.trust(r.marketplace) === 'ok');
+    }
+    return [...list].sort((a, b) =>
       this.sortBy === 'price-high' ? b.price - a.price : a.price - b.price
     );
+  }
+
+  trust(marketplace: string): TrustLevel {
+    return retailerTrust(marketplace);
   }
 
   get selectedCategoryLabel(): string {

@@ -1,0 +1,24 @@
+<div *ngIf="notFound" class="container blog-not-found">
+  <p>Post not found.</p>
+  <a routerLink="/blog">← Back to blog</a>
+</div>
+
+<article class="blog-post-wrap" *ngIf="post">
+  <div class="container blog-post-inner">
+    <a class="blog-back" routerLink="/blog">← All articles</a>
+
+    <header class="blog-post-header">
+      <div class="blog-card-meta">
+        <span class="blog-card-category">{{ post.category }}</span>
+        <span class="blog-card-dot">·</span>
+        <span class="blog-card-date">{{ post.date | date:'d MMM yyyy' }}</span>
+        <span class="blog-card-dot">·</span>
+        <span class="blog-card-read">{{ post.readTime }} min read</span>
+      </div>
+      <h1 class="blog-post-title">{{ post.title }}</h1>
+      <p class="blog-post-excerpt">{{ post.excerpt }}</p>
+    </header>
+
+    <div class="blog-post-body" [innerHTML]="safeBody"></div>
+  </div>
+</article>
