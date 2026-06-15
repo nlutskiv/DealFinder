@@ -12,6 +12,14 @@ public class RankingItemDto
     public string TopListingImageUrl { get; set; } = "";
     public string TopListingMarketplace { get; set; } = "";
 
+    // Cheapest listing from a non-risky (trusted) seller. Null when every listing
+    // for this model is from a risky seller — the frontend hides those when
+    // "Hide risky sellers" is on, instead of dropping the whole model.
+    public decimal? TrustedMinPrice { get; set; }
+    public string TrustedTopListingUrl { get; set; } = "";
+    public string TrustedTopListingImageUrl { get; set; } = "";
+    public string TrustedTopListingMarketplace { get; set; } = "";
+
     // Relative performance index for GPU/CPU models (null for other categories).
     public double? PerformanceScore { get; set; }
 

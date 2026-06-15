@@ -2,10 +2,10 @@
   <div class="container">
     <h1 class="rankings-title">Best Deals Today</h1>
     <p class="rankings-sub" *ngIf="isValueRanked">
-      GPUs and CPUs ranked by performance per pound from live UK retailer prices. Best value, not just cheapest.
+      Ranked by value from live UK retailer prices — best spec per pound (performance, capacity or wattage), not just the cheapest.
     </p>
     <p class="rankings-sub" *ngIf="!isValueRanked">
-      Top 5 cheapest options per component, live from retailer feeds. Sorted by total price including delivery.
+      Cheapest options per component, live from retailer feeds. Sorted by total price including delivery.
     </p>
   </div>
 </section>
@@ -49,7 +49,7 @@
           class="price-pill hide-risky-toggle"
           [class.active]="hideRisky"
           (click)="hideRisky = !hideRisky"
-        >Hide risky sellers</button>
+        >New only</button>
       </div>
 
       <div class="rankings-empty" *ngIf="visibleItems.length === 0">
@@ -62,7 +62,7 @@
 
           <div class="rank-image-wrap">
             <img class="rank-image"
-              [src]="item.topListingImageUrl || '/fallback-product.svg'"
+              [src]="effectiveImage(item)"
               (error)="onImageError($event)"
               [alt]="item.modelLabel" />
           </div>
@@ -70,18 +70,18 @@
           <div class="rank-info">
             <a class="rank-model rank-model-link" [routerLink]="productLink(item)">{{ item.modelLabel }}</a>
             <p class="rank-meta">
-              {{ item.listingCount }} {{ item.listingCount === 1 ? 'listing' : 'listings' }} · {{ item.topListingMarketplace }}
+              {{ item.listingCount }} {{ item.listingCount === 1 ? 'listing' : 'listings' }} · {{ effectiveMarketplace(item) }}
               <span class="rank-value-badge" *ngIf="item.valueScore != null">BEST VALUE</span>
             </p>
           </div>
 
           <div class="rank-price-wrap">
-            <span class="rank-price">£{{ item.minPrice | number:'1.2-2' }}</span>
+            <span class="rank-price">£{{ effectivePrice(item) | number:'1.2-2' }}</span>
             <span class="rank-from">from</span>
           </div>
 
-          <a class="rank-btn" [href]="item.topListingUrl" target="_blank" rel="noopener noreferrer sponsored">
-            View at {{ item.topListingMarketplace }} →
+          <a class="rank-btn" [href]="effectiveUrl(item)" target="_blank" rel="noopener noreferrer sponsored">
+            View at {{ effectiveMarketplace(item) }} →
           </a>
         </div>
       </div>

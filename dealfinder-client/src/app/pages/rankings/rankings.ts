@@ -3,7 +3,6 @@ import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { RankingsService, RankingItem } from '../../services/rankings.service';
-import { retailerTrust } from '../../models/retailer-trust';
 
 const CATEGORY_ORDER = ['gpu', 'cpu', 'motherboard', 'ram', 'storage', 'psu', 'case', 'cooler'];
 
@@ -116,11 +115,56 @@ export class Rankings implements OnInit {
   }
 
   get visibleItems(): RankingItem[] {
-    return this.items.filter(i =>
+    let list = this.items.filter(i =>
       i.category === this.activeCategory &&
-      i.minPrice >= this.minPrice &&
-      (!this.hideRisky || retailerTrust(i.topListingMarketplace) !== 'risky')
+      this.effectivePrice(i) >= this.minPrice
     );
+
+    if (!this.hideRisky) {
+      return list;
+    }
+
+    // When hiding risky sellers, drop only models that have NO trusted listing,
+    // then re-rank by the trusted price/value (the backend ranked by overall price,
+    // which may have used a risky listing).
+    list = list.filter(i => i.trustedMinPrice != null);
+
+    const valueRanked = list.some(i => i.valueScore != null);
+    return [...list].sort((a, b) => {
+      if (valueRanked) {
+        return this.trustedValue(b) - this.trustedValue(a);
+      }
+      return this.effectivePrice(a) - this.effectivePrice(b);
+    });
+  }
+
+  /** Price shown for a row, honouring the hide-risky toggle. */
+  effectivePrice(item: RankingItem): number {
+    if (this.hideRisky && item.trustedMinPrice != null) return item.trustedMinPrice;
+    return item.minPrice;
+  }
+
+  effectiveUrl(item: RankingItem): string {
+    return this.hideRisky && item.trustedTopListingUrl ? item.trustedTopListingUrl : item.topListingUrl;
+  }
+
+  effectiveImage(item: RankingItem): string {
+    return (this.hideRisky && item.trustedTopListingImageUrl
+      ? item.trustedTopListingImageUrl
+      : item.topListingImageUrl) || '/fallback-product.svg';
+  }
+
+  effectiveMarketplace(item: RankingItem): string {
+    return this.hideRisky && item.trustedTopListingMarketplace
+      ? item.trustedTopListingMarketplace
+      : item.topListingMarketplace;
+  }
+
+  private trustedValue(item: RankingItem): number {
+    if (item.performanceScore != null && item.trustedMinPrice) {
+      return item.performanceScore / item.trustedMinPrice;
+    }
+    return -1;
   }
 
   get isValueRanked(): boolean {

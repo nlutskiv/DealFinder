@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using DealFinder.Api.Data;
 using DealFinder.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -7,8 +8,22 @@ namespace DealFinder.Api.Services.Rankings;
 
 public class RankingsService : IRankingsService
 {
-    private const string CacheKey = "rankings:v3";
+    private const string CacheKey = "rankings:v4";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(15);
+
+    // Sellers treated as "risky" (used/refurb marketplaces). Keep in sync with the
+    // frontend list in models/retailer-trust.ts. Matched as a case-insensitive substring.
+    private static readonly string[] RiskyMarketplaces =
+    [
+        "love tech hate waste",
+        "lovetechhatewaste",
+    ];
+
+    private static bool IsRiskyMarketplace(string marketplace)
+    {
+        var m = (marketplace ?? "").Trim().ToLowerInvariant();
+        return RiskyMarketplaces.Any(r => m.Contains(r));
+    }
 
     private static readonly Dictionary<string, string> CategoryLabels = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -40,7 +55,13 @@ public class RankingsService : IRankingsService
 
         var results = await BuildRankingsAsync(perCategory);
 
-        _cache.Set(CacheKey, results, CacheTtl);
+        // Never cache an empty result — otherwise a request that lands during a
+        // truncate/re-ingest poisons the cache with [] for the whole TTL, leaving
+        // rankings blank even after the DB is repopulated.
+        if (results.Count > 0)
+        {
+            _cache.Set(CacheKey, results, CacheTtl);
+        }
 
         return results;
     }
@@ -72,18 +93,26 @@ public class RankingsService : IRankingsService
                 .ToListAsync();
 
             var candidates = rows
-                .Select(r => new TopModel(
-                    category, categoryLabel, r.Id, r.Label,
-                    r.MinPrice!.Value, r.ListingCount,
-                    r.PerformanceScore,
-                    r.PerformanceScore.HasValue && r.MinPrice.Value > 0
-                        ? Math.Round(r.PerformanceScore.Value / (double)r.MinPrice.Value, 3)
-                        : null))
+                .Select(r =>
+                {
+                    // Merit = the "more is better" spec for the category:
+                    //   GPU/CPU -> benchmark score, Storage/RAM -> capacity (GB),
+                    //   PSU -> wattage. ValueScore = merit per pound.
+                    var merit = ModelMerit(category, r.Label, r.PerformanceScore);
+                    var valueScore = merit.HasValue && r.MinPrice!.Value > 0
+                        ? Math.Round(merit.Value / (double)r.MinPrice.Value, 4)
+                        : (double?)null;
+
+                    return new TopModel(
+                        category, categoryLabel, r.Id, r.Label,
+                        r.MinPrice!.Value, r.ListingCount,
+                        r.PerformanceScore, valueScore);
+                })
                 .ToList();
 
-            // GPU/CPU: rank by performance-per-pound (scored models first), so the top
-            // of the list is the best value, not the cheapest obsolete part.
-            // Other categories have no performance axis — cheapest first remains correct.
+            // Categories with a measurable spec (GPU/CPU/Storage/RAM/PSU) rank by
+            // value-per-pound — best bang per pound first, not the cheapest tiny part.
+            // Motherboard/Case/Cooler have no such axis, so cheapest-first stands.
             var ordered = candidates.Any(c => c.ValueScore.HasValue)
                 ? candidates
                     .OrderByDescending(c => c.ValueScore.HasValue)
@@ -116,11 +145,19 @@ public class RankingsService : IRankingsService
             .GroupBy(l => l.CatalogId)
             .ToDictionary(g => g.Key, g => g.MinBy(l => l.Total)!);
 
+        // Cheapest listing per model from a non-risky seller only.
+        var trustedTopByCatalog = allListings
+            .Where(l => !IsRiskyMarketplace(l.Marketplace))
+            .GroupBy(l => l.CatalogId)
+            .ToDictionary(g => g.Key, g => g.MinBy(l => l.Total)!);
+
         var results = new List<RankingItemDto>(topModels.Count);
 
         foreach (var m in topModels)
         {
             if (!topListingByCatalog.TryGetValue(m.CatalogId, out var top)) continue;
+
+            var hasTrusted = trustedTopByCatalog.TryGetValue(m.CatalogId, out var trusted);
 
             results.Add(new RankingItemDto
             {
@@ -133,12 +170,40 @@ public class RankingsService : IRankingsService
                 TopListingUrl = top.Url,
                 TopListingImageUrl = top.ImageUrl,
                 TopListingMarketplace = top.Marketplace,
+                TrustedMinPrice = hasTrusted ? trusted!.Total : null,
+                TrustedTopListingUrl = hasTrusted ? trusted!.Url : "",
+                TrustedTopListingImageUrl = hasTrusted ? trusted!.ImageUrl : "",
+                TrustedTopListingMarketplace = hasTrusted ? trusted!.Marketplace : "",
                 PerformanceScore = m.PerformanceScore,
                 ValueScore = m.ValueScore,
             });
         }
 
         return results;
+    }
+
+    // The "more is better" spec used to rank value within a category.
+    private static double? ModelMerit(string category, string label, double? performanceScore) =>
+        category switch
+        {
+            "gpu" or "cpu" => performanceScore,        // benchmark index
+            "storage" or "ram" => ParseCapacityGb(label),
+            "psu" => ParseWatts(label),
+            _ => null,                                   // motherboard/case/cooler: cheapest-first
+        };
+
+    private static double? ParseCapacityGb(string label)
+    {
+        var m = Regex.Match(label, @"(\d+)\s?(gb|tb)", RegexOptions.IgnoreCase);
+        if (!m.Success) return null;
+        var n = double.Parse(m.Groups[1].Value);
+        return m.Groups[2].Value.Equals("tb", StringComparison.OrdinalIgnoreCase) ? n * 1000 : n;
+    }
+
+    private static double? ParseWatts(string label)
+    {
+        var m = Regex.Match(label, @"(\d{3,4})\s?w", RegexOptions.IgnoreCase);
+        return m.Success ? double.Parse(m.Groups[1].Value) : null;
     }
 
     private record TopModel(

@@ -46,8 +46,11 @@ public class DealFinderDbContext : DbContext
         modelBuilder.Entity<ProductListing>()
             .Property(x => x.Category)
             .IsRequired();
+        // Unique per (Category, SearchQuery) — matches the catalog grouping key.
+        // The same model string can legitimately appear under different categories,
+        // so a global-unique on SearchQuery alone is too strict and breaks ingestion.
         modelBuilder.Entity<ProductCatalog>()
-            .HasIndex(x => x.SearchQuery)
+            .HasIndex(x => new { x.Category, x.SearchQuery })
             .IsUnique();
 
         modelBuilder.Entity<ProductListing>()

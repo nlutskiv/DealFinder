@@ -15,13 +15,17 @@ public class DbProductProvider : IProductProvider
         _dbContextFactory = dbContextFactory;
     }
 
-    public async Task<List<ProductResult>> SearchProductsAsync(string query)
+    public async Task<List<ProductResult>> SearchProductsAsync(int catalogProductId)
     {
         await using var dbContext =
             await _dbContextFactory.CreateDbContextAsync();
 
+        // Filter in the database (ProductCatalogId is indexed) instead of pulling
+        // the whole listings table into memory and filtering in C#.
         var listings = await dbContext.ProductListings
             .AsNoTracking()
+            .Where(listing => listing.ProductCatalogId == catalogProductId)
+            .OrderBy(listing => listing.Price)
             .ToListAsync();
 
         return listings

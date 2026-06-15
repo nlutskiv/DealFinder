@@ -35,6 +35,8 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
     public async Task IngestAsync(
         Stream feedStream,
         string sourceName,
+        Dictionary<(string Category, string Label), ProductCatalog> catalogCache,
+        Dictionary<string, ProductListing> listingCache,
         CancellationToken ct = default)
     {
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -58,20 +60,6 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         var skipped = 0;
 
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(ct);
-
-        // Preload both tables once. Supabase round-trips are ~150ms, so per-row lookups
-        // dominate sync time — two upfront queries replace two SELECTs per imported row.
-        var catalogCache = new Dictionary<(string Category, string Label), ProductCatalog>();
-        foreach (var product in await dbContext.ProductCatalog.ToListAsync(ct))
-        {
-            catalogCache.TryAdd((product.Category, product.Label), product);
-        }
-
-        var listingCache = new Dictionary<string, ProductListing>();
-        foreach (var existingListing in await dbContext.ProductListings.ToListAsync(ct))
-        {
-            listingCache.TryAdd(existingListing.Url, existingListing);
-        }
 
         using var reader = new StreamReader(feedStream);
         using var csv = new CsvReader(reader, config);
@@ -101,7 +89,9 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
                 ct
             );
 
-            listing.ProductCatalogId = catalogProduct.Id;
+            // Link via navigation, not Id — the catalog may be a not-yet-saved entity
+            // (Id == 0). EF assigns the real FK during the batched SaveChanges.
+            listing.Catalog = catalogProduct;
 
             await UpsertListingAsync(dbContext, listingCache, listing, ct);
             imported++;
@@ -109,6 +99,11 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             if (imported % BatchSize == 0)
             {
                 await dbContext.SaveChangesAsync(ct);
+
+                // Keep the change tracker small so SaveChanges' change detection
+                // stays O(batch), not O(rows-so-far). Cached entities re-attach
+                // on demand in GetOrCreate/Upsert.
+                dbContext.ChangeTracker.Clear();
 
                 _logger.LogInformation(
                     "Awin ingest progress. Source={Source}, Total={Total}, Imported={Imported}, Skipped={Skipped}",
@@ -274,10 +269,14 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             row.ProductName
         );
 
+        // Prefer Awin's image proxy (aw_image_url, served via productserve.com) — it's
+        // built for affiliate display and won't be hotlink-blocked. Some merchants'
+        // own image URLs are protected (e.g. Quzo's assets.quzo.net returns HTTP 526),
+        // so the merchant URL is only a fallback.
         var imageUrl = FirstNonEmpty(
+            row.AwinImageUrl,
             row.MerchantImageUrl,
             row.LargeImage,
-            row.AwinImageUrl,
             row.MerchantThumbUrl
         );
         if (IsBadImage(imageUrl))
@@ -350,106 +349,86 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             return null;
         }
 
-        // PcNova category-path source of truth.
+        // Each match requires (1) a category-path match, (2) a positive model/type
+        // signal in the title, and (3) no disqualifying reject word. The signal check
+        // is what keeps junk out — e.g. a "1000W" webcam filed under
+        // "pc components > other" fails HasPsuSignal and is dropped.
         if (CategoryContains(merchantCategory, "pc components", "processors"))
-        {
-            return HasCpuModel(titleText) && !ContainsAny(allText, CpuRejectWords)
-                ? Cpu
-                : null;
-        }
+            return HasCpuModel(titleText) && !ContainsAny(allText, CpuRejectWords) ? Cpu : null;
 
         if (CategoryContains(merchantCategory, "pc components", "graphics cards"))
-        {
-            return HasGpuModel(titleText) && !ContainsAny(allText, GpuRejectWords)
-                ? Gpu
-                : null;
-        }
+            return HasGpuModel(titleText) && !ContainsAny(allText, GpuRejectWords) ? Gpu : null;
 
         if (CategoryContains(merchantCategory, "pc components", "motherboards"))
-        {
-            return HasMotherboardSignal(titleText) && !ContainsAny(allText, MotherboardRejectWords)
-                ? Motherboard
-                : null;
-        }
+            return HasMotherboardSignal(titleText) && !ContainsAny(allText, MotherboardRejectWords) ? Motherboard : null;
 
         if (CategoryContains(merchantCategory, "pc components", "memory modules"))
-        {
-            return HasRamSignal(titleText) && !ContainsAny(allText, RamRejectWords)
-                ? Ram
-                : null;
-        }
+            return HasRamSignal(titleText) && !ContainsAny(allText, RamRejectWords) ? Ram : null;
 
         if (CategoryContains(merchantCategory, "storage", "solid state"))
         {
-            // External/portable drives share the same category path keywords — skip them
-            if (ContainsAny(merchantCategory, ["external", "portable", "personal stock"]))
-                return null;
-
-            return HasStorageSignal(titleText) && !ContainsAny(allText, StorageRejectWords)
-                ? Storage
-                : null;
+            if (ContainsAny(merchantCategory, ["external", "portable", "personal stock"])) return null;
+            return HasStorageSignal(titleText) && !ContainsAny(allText, StorageRejectWords) ? Storage : null;
         }
 
-        // PcNova dumps PSUs into "Other", so category alone is not enough.
+        // Some retailers dump PSUs into "Other", so the signal check is essential here.
         if (CategoryContains(merchantCategory, "pc components", "other"))
-        {
-            return HasPsuSignal(titleText) && !ContainsAny(allText, PsuRejectWords)
-                ? Psu
-                : null;
-        }
+            return HasPsuSignal(titleText) && !ContainsAny(allText, PsuRejectWords) ? Psu : null;
 
         if (CategoryContains(merchantCategory, "cases & cooling", "cooling & parts"))
-        {
-            return HasCoolerSignal(titleText) && !ContainsAny(allText, CoolerRejectWords)
-                ? Cooler
-                : null;
-        }
+            return HasCoolerSignal(titleText) && !ContainsAny(allText, CoolerRejectWords) ? Cooler : null;
 
         if (CategoryContains(merchantCategory, "cases & cooling", "cases & parts"))
         {
-            // "Case Parts" = fans, filters, accessories — not actual cases
-            if (ContainsAny(merchantCategory, ["case parts"]))
-                return null;
-
-            return HasCaseSignal(titleText) && !ContainsAny(allText, CaseRejectWords)
-                ? Case
-                : null;
+            if (ContainsAny(merchantCategory, ["case parts"])) return null;
+            return HasCaseSignal(titleText) && !ContainsAny(allText, CaseRejectWords) ? Case : null;
         }
 
-        // Love Tech Hate Waste (and any retailer using "Computing > X" paths).
-        // Title signal used as a secondary filter within each matched category
-        // to exclude capture cards, external drives, etc. from the GPU/Storage buckets.
         if (CategoryContains(merchantCategory, "computing", "graphics"))
-        {
-            return HasGpuModel(titleText) && !ContainsAny(allText, GpuRejectWords)
-                ? Gpu
-                : null;
-        }
+            return HasGpuModel(titleText) && !ContainsAny(allText, GpuRejectWords) ? Gpu : null;
 
         if (CategoryContains(merchantCategory, "computing", "processors"))
-        {
-            return HasCpuModel(titleText) && !ContainsAny(allText, CpuRejectWords)
-                ? Cpu
-                : null;
-        }
+            return HasCpuModel(titleText) && !ContainsAny(allText, CpuRejectWords) ? Cpu : null;
 
         if (CategoryContains(merchantCategory, "computing", "internal memory"))
-        {
-            return HasRamSignal(titleText) && !ContainsAny(allText, RamRejectWords)
-                ? Ram
-                : null;
-        }
+            return HasRamSignal(titleText) && !ContainsAny(allText, RamRejectWords) ? Ram : null;
 
         if (CategoryContains(merchantCategory, "computing", "data storage"))
         {
-            if (ContainsAny(merchantCategory, ["external", "portable", "usb"]))
-                return null;
-
-            return HasStorageSignal(titleText) && !ContainsAny(allText, StorageRejectWords)
-                ? Storage
-                : null;
+            if (ContainsAny(merchantCategory, ["external", "portable", "usb"])) return null;
+            return HasStorageSignal(titleText) && !ContainsAny(allText, StorageRejectWords) ? Storage : null;
         }
 
+        // Awin standard taxonomy paths (used by most advertisers).
+        if (CategoryContains(categoryText, "graphics cards & video"))
+            return HasGpuModel(titleText) && !ContainsAny(allText, GpuRejectWords) ? Gpu : null;
+
+        if (CategoryContains(categoryText, "computer processors"))
+            return HasCpuModel(titleText) && !ContainsAny(allText, CpuRejectWords) ? Cpu : null;
+
+        if (CategoryContains(categoryText, "motherboards"))
+            return HasMotherboardSignal(titleText) && !ContainsAny(allText, MotherboardRejectWords) ? Motherboard : null;
+
+        if (CategoryContains(categoryText, "computer power supplies"))
+            return HasPsuSignal(titleText) && !ContainsAny(allText, PsuRejectWords) ? Psu : null;
+
+        if (CategoryContains(categoryText, "desktop computer & server cases"))
+            return HasCaseSignal(titleText) && !ContainsAny(allText, CaseRejectWords) ? Case : null;
+
+        if (CategoryContains(categoryText, "storage devices"))
+        {
+            if (ContainsAny(categoryText, ["external", "portable"])) return null;
+            return HasStorageSignal(titleText) && !ContainsAny(allText, StorageRejectWords) ? Storage : null;
+        }
+
+        if (CategoryContains(categoryText, "electronics accessories", "memory") &&
+            !ContainsAny(categoryText, ["phone", "camera", "flash", "card", "microsd", "mobile"]))
+            return HasRamSignal(titleText) && !ContainsAny(allText, RamRejectWords) ? Ram : null;
+
+        // No title-signal fallback: if the category path doesn't identify the type,
+        // we drop the product rather than guess from the title (which pulls in
+        // laptops/mini-PCs whose names contain a CPU/GPU model). Cleaner feed, and
+        // it's fine to miss the odd product filed under a generic category.
         return null;
     }
 
@@ -487,7 +466,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             )
         );
 
-        return category switch
+        var label = category switch
         {
             Gpu => ExtractGpuModel(text),
             Cpu => ExtractCpuModel(text),
@@ -499,15 +478,20 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             Case => ExtractCaseModel(text),
             _ => ""
         };
+
+        // No name-fallback: if we can't identify a real model, the product can't be
+        // grouped, so it's dropped (handled by the empty-label check in TryBuildListing).
+        // This keeps the picker to clean model groups instead of thousands of singletons.
+        return label;
     }
 
     private static string ExtractGpuModel(string text)
     {
         var patterns = new[]
         {
-            @"\brtx\s?(5090|5080|5070|5060|4090|4080|4070|4060|3090|3080|3070|3060|3050)\s?(ti|super)?\b",
-            @"\bgtx\s?(1660|1650|1080|1070|1060)\s?(ti|super)?\b",
-            @"\brx\s?(9070|7900|7800|7700|7600|6950|6900|6800|6700|6600|6500|6400|6300)\s?(xt|gre|xtx)?\b"
+            @"\brtx\s?(5090|5080|5070|5060|4090|4080|4070|4060|3090|3080|3070|3060|3050|2080|2070|2060|2050)\s?(ti|super)?\b",
+            @"\bgtx\s?(1660|1650|1630|1080|1070|1060|1050)\s?(ti|super)?\b",
+            @"\brx\s?(9070|7900|7800|7700|7600|6950|6900|6800|6700|6600|6500|6400|6300|5700|5600|5500)\s?(xt|gre|xtx)?\b"
         };
 
         foreach (var pattern in patterns)
@@ -573,10 +557,17 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
 
     private static string ExtractStorageModel(string text)
     {
-        var capacityMatch = Regex.Match(text, @"\b(\d+)\s?(gb|tb)\b", RegexOptions.IgnoreCase);
+        var capacityMatch = Regex.Match(text, @"\b(\d{1,5})\s?(gb|tb)\b", RegexOptions.IgnoreCase);
         if (!capacityMatch.Success) return "";
 
-        var capacity = capacityMatch.Value.ToUpperInvariant().Replace(" ", "");
+        // Reject nonsense capacities like "0 TB" (diskless RAID arrays/enclosures)
+        // and normalise leading zeros ("02TB" -> "2TB").
+        var amount = int.Parse(capacityMatch.Groups[1].Value);
+        var unit = capacityMatch.Groups[2].Value.ToUpperInvariant();
+        if (amount <= 0) return "";
+        if (unit == "TB" && amount > 16) return "";   // implausible consumer SSD size
+
+        var capacity = $"{amount}{unit}";
 
         if (ContainsAny(text, ["nvme", "m.2", "pcie", "m2"]))
             return $"{capacity} M.2 NVMe";
@@ -703,6 +694,14 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
     {
         if (catalogCache.TryGetValue((category, label), out var existing))
         {
+            // The shared cache outlives this feed's DbContext, so a cached entity
+            // may be detached. Re-attach (as Unchanged) so FK linking works without
+            // EF trying to re-insert it.
+            if (dbContext.Entry(existing).State == EntityState.Detached)
+            {
+                dbContext.ProductCatalog.Attach(existing);
+            }
+
             return existing;
         }
 
@@ -715,9 +714,10 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             IsActive = true
         };
 
+        // Don't save here — that's a DB round-trip per new catalog entry. The listing
+        // is linked via the Catalog navigation property, so EF resolves the FK during
+        // the batched SaveChanges below.
         await dbContext.ProductCatalog.AddAsync(catalogProduct, ct);
-        // Save immediately — the listing row needs this product's generated Id.
-        await dbContext.SaveChangesAsync(ct);
 
         catalogCache[(category, label)] = catalogProduct;
 
@@ -737,6 +737,13 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             return;
         }
 
+        // Cached entity may be detached (cache outlives the per-feed DbContext).
+        // Attach as Unchanged so the property edits below register as updates.
+        if (dbContext.Entry(existing).State == EntityState.Detached)
+        {
+            dbContext.ProductListings.Attach(existing);
+        }
+
         existing.Title = listing.Title;
         existing.Description = listing.Description;
         existing.Price = listing.Price;
@@ -745,7 +752,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         existing.Marketplace = listing.Marketplace;
         existing.ImageUrl = listing.ImageUrl;
         existing.Category = listing.Category;
-        existing.ProductCatalogId = listing.ProductCatalogId;
+        existing.Catalog = listing.Catalog;
         existing.LastSeenUtc = DateTime.UtcNow;
     }
 
@@ -812,16 +819,26 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
 
     private static string NormaliseCondition(AwinRow row)
     {
+        // The feed's condition field can't be trusted on its own: some refurb
+        // retailers (e.g. Love Tech Hate Waste) tag everything "new" but put
+        // "Used"/"Refurbished" in the title. So scan the title/category (and the
+        // condition field itself) for used signals first — those win over "new".
+        var text = Normalise(
+            $"{row.Condition} {row.ProductName} {row.MerchantCategory} {row.CategoryPath}"
+        );
+
+        if (ContainsAny(text, [
+                "used", "refurb", "pre-owned", "preowned", "pre owned",
+                "open box", "open-box", "b grade", "b-grade",
+                "ex display", "ex-display", "second hand", "second-hand"
+            ]))
+        {
+            return "refurbished/open-box";
+        }
+
         if (!string.IsNullOrWhiteSpace(row.Condition))
         {
             return row.Condition.ToLowerInvariant();
-        }
-
-        var text = Normalise($"{row.ProductName} {row.MerchantCategory} {row.CategoryPath}");
-
-        if (ContainsAny(text, ["used", "refurb", "open box", "open-box", "b grade", "b-grade", "ex display"]))
-        {
-            return "refurbished/open-box";
         }
 
         return "new";
@@ -869,86 +886,6 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             .Replace("GTX", "GTX")
             .Replace("RX", "RX")
             .Replace("DDR", "DDR");
-    }
-
-    private static bool HasGpuModel(string text)
-    {
-        return Regex.IsMatch(
-            text,
-            @"\b(geforce\s+)?rtx\s?[2345][0-9]{3}\s?(ti|super)?\b|\b(geforce\s+)?gtx\s?(10|16)[0-9]{2}\s?(ti|super)?\b|\b(radeon\s+)?rx\s?[5679][0-9]{3}\s?(xt|gre|xtx)?\b",
-            RegexOptions.IgnoreCase
-        );
-    }
-
-    private static bool HasCpuModel(string text)
-    {
-        return Regex.IsMatch(
-            text,
-            @"\b(ryzen\s?[3579]\s?\d{4}|core\s?i[3579]|i[3579][-\s]?\d{4,5})\b",
-            RegexOptions.IgnoreCase
-        );
-    }
-
-    private static bool HasMotherboardSignal(string text)
-    {
-        return Regex.IsMatch(
-            text,
-            @"\b(a520|a620|b450|b550|b650|b760|b850|x570|x670|x870|z690|z790|z890|h610|h670|h770|motherboard|mainboard)\b",
-            RegexOptions.IgnoreCase
-        );
-    }
-
-    private static bool HasRamSignal(string text)
-    {
-        return Regex.IsMatch(
-            text,
-            @"\b(ddr4|ddr5)\b",
-            RegexOptions.IgnoreCase
-        );
-    }
-
-    private static bool HasCoolerSignal(string text)
-    {
-        return Regex.IsMatch(
-            text,
-            @"\b(cpu\s?cooler|heatsink|heat\s?sink|air\s?cooler|liquid\s?cooler|water\s?cooler|tower\s?cooler|aio|all[-\s]in[-\s]one)\b",
-            RegexOptions.IgnoreCase
-        );
-    }
-
-    private static bool HasCaseSignal(string text)
-    {
-        return Regex.IsMatch(
-            text,
-            @"\b(pc\s?case|computer\s?case|gaming\s?case|tower\s?case|chassis|mid[-\s]tower|full[-\s]tower|mini[-\s]tower|atx\s?case|itx\s?case)\b",
-            RegexOptions.IgnoreCase
-        );
-    }
-
-    private static bool HasStorageSignal(string text)
-    {
-        return Regex.IsMatch(
-            text,
-            @"\b(ssd|nvme|m\.2|solid\s?state|nand)\b",
-            RegexOptions.IgnoreCase
-        );
-    }
-
-    private static bool HasPsuSignal(string text)
-    {
-        var hasWattage = Regex.IsMatch(
-            text,
-            @"\b(3[0-9]{2}|[4-9][0-9]{2}|1[0-5][0-9]{2})\s?w\b",
-            RegexOptions.IgnoreCase
-        );
-
-        var hasPsuSignal = Regex.IsMatch(
-            text,
-            @"\b(psu|power supply|power-supply|atx|sfx|80\s?plus|80\+|modular)\b",
-            RegexOptions.IgnoreCase
-        );
-
-        return hasWattage && hasPsuSignal;
     }
 
     private static readonly string[] GlobalRejectWords =
@@ -1002,6 +939,81 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         ]);
     }
 
+    // ---- Positive type/model signals: a product must look like its category. ----
+
+    private static bool HasGpuModel(string text)
+    {
+        // Single source of truth: if we can extract a model label, it's a GPU we
+        // support. This keeps detection and labelling from drifting apart (which
+        // would otherwise classify a card then silently drop it for lack of a label).
+        return ExtractGpuModel(text).Length > 0;
+    }
+
+    private static bool HasCpuModel(string text)
+    {
+        return Regex.IsMatch(
+            text,
+            @"\b(ryzen\s?[3579]\s?\d{4}|core\s?i[3579]|i[3579][-\s]?\d{4,5})\b",
+            RegexOptions.IgnoreCase
+        );
+    }
+
+    private static bool HasMotherboardSignal(string text)
+    {
+        return Regex.IsMatch(
+            text,
+            @"\b(a520|a620|b450|b550|b650|b760|b850|x570|x670|x870|z690|z790|z890|h610|h670|h770|motherboard|mainboard)\b",
+            RegexOptions.IgnoreCase
+        );
+    }
+
+    private static bool HasRamSignal(string text)
+    {
+        return Regex.IsMatch(text, @"\b(ddr4|ddr5)\b", RegexOptions.IgnoreCase);
+    }
+
+    private static bool HasCoolerSignal(string text)
+    {
+        return Regex.IsMatch(
+            text,
+            @"\b(cpu\s?cooler|heatsink|heat\s?sink|air\s?cooler|liquid\s?cooler|water\s?cooler|tower\s?cooler|aio|all[-\s]in[-\s]one)\b",
+            RegexOptions.IgnoreCase
+        );
+    }
+
+    private static bool HasCaseSignal(string text)
+    {
+        return Regex.IsMatch(
+            text,
+            @"\b(pc\s?case|computer\s?case|gaming\s?case|tower\s?case|chassis|mid[-\s]tower|full[-\s]tower|mini[-\s]tower|atx\s?case|itx\s?case)\b",
+            RegexOptions.IgnoreCase
+        );
+    }
+
+    private static bool HasStorageSignal(string text)
+    {
+        return Regex.IsMatch(text, @"\b(ssd|nvme|m\.2|solid\s?state|nand)\b", RegexOptions.IgnoreCase);
+    }
+
+    private static bool HasPsuSignal(string text)
+    {
+        var hasWattage = Regex.IsMatch(
+            text,
+            @"\b(3[0-9]{2}|[4-9][0-9]{2}|1[0-5][0-9]{2})\s?w\b",
+            RegexOptions.IgnoreCase
+        );
+
+        var hasPsuKeyword = Regex.IsMatch(
+            text,
+            @"\b(psu|power supply|power-supply|atx|sfx|80\s?plus|80\+|modular)\b",
+            RegexOptions.IgnoreCase
+        );
+
+        return hasWattage && hasPsuKeyword;
+    }
+
+    // ---- Per-category reject words (consumer-only scope; trimmed for looseness). ----
+
     private static readonly string[] GpuRejectWords =
     [
         "quadro",
@@ -1050,8 +1062,6 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
 
     private static readonly string[] RamRejectWords =
     [
-        "ddr2",
-        "ddr3",
         "ecc",
         "registered",
         "rdimm",
@@ -1060,8 +1070,6 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         "so-dimm",
         "server",
         "laptop",
-        "replacement",
-        "replaces",
         "memory card",
         "microsd",
         "cfast",
@@ -1081,7 +1089,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         "fan only",
         "replacement fan",
         "case fan",
-        "chassis fan",
+        "chassis fan"
     ];
 
     private static readonly string[] CaseRejectWords =
@@ -1097,6 +1105,23 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         "protective case",
         "drive caddy",
         "hdd caddy",
+        // Screw multipacks match the "pc case" substring (e.g. "PC Case Fan Screws")
+        // but aren't cases. These tokens are specific enough not to hit real cases.
+        "fan screw",
+        "case screw",
+        "screw kit",
+        "screw set",
+        "thumbscrew",
+        // Server/rackmount chassis aren't consumer PC cases.
+        "rack",
+        "rackmount",
+        "rack mount",
+        "server",
+        "supermicro",
+        "1u ",
+        "2u ",
+        "3u ",
+        "4u "
     ];
 
     private static readonly string[] StorageRejectWords =
@@ -1119,7 +1144,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         "portable solid state",
         "portable hard",
         "portable drive",
-        "personal stock",
+        "personal stock"
     ];
 
     private static readonly string[] PsuRejectWords =
@@ -1141,6 +1166,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         "cisco",
         "netgear"
     ];
+
 
     private sealed class AwinRow
     {

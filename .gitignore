@@ -5,6 +5,9 @@ bin/
 obj/
 /DealFinder.Api/appsettings.Development.json
 
+# Claude Code local data
+.claude/
+
 # Local databases
 *.db
 *.db-shm

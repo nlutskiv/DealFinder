@@ -13,6 +13,10 @@ export interface RankingItem {
   topListingUrl: string;
   topListingImageUrl: string;
   topListingMarketplace: string;
+  trustedMinPrice?: number | null;
+  trustedTopListingUrl?: string;
+  trustedTopListingImageUrl?: string;
+  trustedTopListingMarketplace?: string;
   performanceScore?: number | null;
   valueScore?: number | null;
 }

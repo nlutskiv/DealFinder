@@ -102,7 +102,7 @@ export class Marketplace implements OnInit {
   get sortedResults(): ProductResult[] {
     let list = this.results;
     if (this.hideRisky) {
-      list = list.filter(r => this.trust(r.marketplace) === 'ok');
+      list = list.filter(r => this.trust(r.marketplace) === 'new');
     }
     return [...list].sort((a, b) =>
       this.sortBy === 'price-high' ? b.price - a.price : a.price - b.price

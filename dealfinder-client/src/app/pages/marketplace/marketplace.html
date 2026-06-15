@@ -152,9 +152,9 @@
             class="sort-pill"
             [class.active]="hideRisky"
             (click)="hideRisky = !hideRisky"
-            title="Hide retailers flagged as high risk"
+            title="Hide used/refurbished listings and show new stock only"
           >
-            Hide risky
+            New only
           </button>
         </div>
       </div>
@@ -196,7 +196,7 @@
           <p class="deal-row-name">{{ product.title }}</p>
           <p class="deal-row-meta">
             {{ product.marketplace }}
-            <span class="retailer-caution-badge" *ngIf="trust(product.marketplace) === 'risky'" title="This retailer has received negative reviews. Proceed with caution.">⚠ Risky</span>
+            <span class="retailer-caution-badge" *ngIf="trust(product.marketplace) === 'used'" title="Used or refurbished stock — usually cheaper, may show signs of wear.">Used / Refurb</span>
             <span class="deal-row-dot">·</span>
             <span class="shipping-tag free" *ngIf="product.shippingPrice === 0">Free delivery</span>
             <span class="shipping-tag" *ngIf="product.shippingPrice > 0">+£{{ product.shippingPrice | number:'1.2-2' }} shipping</span>

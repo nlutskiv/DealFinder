@@ -27,26 +27,16 @@ public class ProductSearchService : IProductSearchService
             return [];
         }
 
-        request.Query = catalogProduct.SearchQuery;
-
-        var allResults = await FetchAllProviderResultsAsync(request.Query);
-
-        return allResults
-            .Where(p => p.Category.Equals(catalogProduct.Category, StringComparison.OrdinalIgnoreCase))
-            .Where(p => p.ProductCatalogId == request.CatalogProductId)
-            .OrderBy(p => p.Price)
-            .ToList();
-    }
-
-    private async Task<List<ProductResult>> FetchAllProviderResultsAsync(string query)
-    {
-        var results = new List<ProductResult>();
+        // Providers filter by catalog id in the database, so no in-memory filtering needed.
+        var allResults = new List<ProductResult>();
 
         foreach (var provider in _providers)
         {
-            results.AddRange(await provider.SearchProductsAsync(query));
+            allResults.AddRange(await provider.SearchProductsAsync(request.CatalogProductId));
         }
 
-        return results;
+        return allResults
+            .OrderBy(p => p.Price)
+            .ToList();
     }
 }

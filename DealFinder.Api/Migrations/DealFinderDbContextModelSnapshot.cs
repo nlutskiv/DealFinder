@@ -178,7 +178,7 @@ namespace DealFinder.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SearchQuery")
+                    b.HasIndex("Category", "SearchQuery")
                         .IsUnique();
 
                     b.ToTable("ProductCatalog");
@@ -280,6 +280,15 @@ namespace DealFinder.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("SavedBuilds");
+                });
+
+            modelBuilder.Entity("DealFinder.Api.Models.ProductListing", b =>
+                {
+                    b.HasOne("DealFinder.Api.Models.ProductCatalog", "Catalog")
+                        .WithMany()
+                        .HasForeignKey("ProductCatalogId");
+
+                    b.Navigation("Catalog");
                 });
 #pragma warning restore 612, 618
         }

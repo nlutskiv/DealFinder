@@ -4,5 +4,5 @@ namespace DealFinder.Api.Providers;
 
 public interface IProductProvider
 {
-    Task<List<ProductResult>> SearchProductsAsync(string query);
+    Task<List<ProductResult>> SearchProductsAsync(int catalogProductId);
 }

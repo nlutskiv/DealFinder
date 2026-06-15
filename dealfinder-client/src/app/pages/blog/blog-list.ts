@@ -21,6 +21,9 @@ export class BlogList {
     meta.updateTag({ name: 'description', content: d });
     meta.updateTag({ property: 'og:title', content: t });
     meta.updateTag({ property: 'og:description', content: d });
+    meta.updateTag({ property: 'og:url', content: 'https://www.dealfinder.tech/blog' });
+    meta.updateTag({ property: 'og:type', content: 'website' });
+    meta.updateTag({ name: 'twitter:card', content: 'summary' });
     meta.updateTag({ name: 'twitter:title', content: t });
     meta.updateTag({ name: 'twitter:description', content: d });
   }

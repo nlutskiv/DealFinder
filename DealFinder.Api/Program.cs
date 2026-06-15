@@ -128,6 +128,9 @@ builder.Services.AddHostedService<AwinFeedRefreshJob>();
 builder.Services.AddHttpClient("AwinFeeds", client =>
 {
     client.Timeout = TimeSpan.FromMinutes(30);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+    );
 });
 
 builder.Services.AddScoped<IRankingsService, RankingsService>();

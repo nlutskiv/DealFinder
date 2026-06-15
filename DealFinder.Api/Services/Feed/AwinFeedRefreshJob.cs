@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using DealFinder.Api.Data;
+using DealFinder.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace DealFinder.Api.Services.Feed;
@@ -55,9 +56,24 @@ public class AwinFeedRefreshJob : BackgroundService
                 string.Join(", ", feeds.Select(feed => $"{feed.AdvertiserId}:{feed.AdvertiserName}"))
             );
 
-            // Sequential by default: concurrent feeds race on creating the same catalog
-            // product (unique index on SearchQuery) and the loser's whole batch rolls back.
-            // Syncs are fast enough now that concurrency buys nothing.
+            // Load caches once for the whole sync cycle — not once per feed.
+            using var cacheScope = _scopeFactory.CreateScope();
+            var dbFactory = cacheScope.ServiceProvider.GetRequiredService<IDbContextFactory<DealFinderDbContext>>();
+            await using var cacheDb = await dbFactory.CreateDbContextAsync(ct);
+
+            var catalogCache = new Dictionary<(string Category, string Label), ProductCatalog>();
+            foreach (var p in await cacheDb.ProductCatalog.ToListAsync(ct))
+                catalogCache.TryAdd((p.Category, p.Label), p);
+
+            var listingCache = new Dictionary<string, ProductListing>();
+            foreach (var l in await cacheDb.ProductListings.ToListAsync(ct))
+                listingCache.TryAdd(l.Url, l);
+
+            _logger.LogInformation(
+                "Cache loaded: {CatalogCount} catalog entries, {ListingCount} listings.",
+                catalogCache.Count, listingCache.Count
+            );
+
             var maxConcurrentFeeds = _config.GetValue("Awin:MaxConcurrentFeeds", 1);
 
             using var semaphore = new SemaphoreSlim(maxConcurrentFeeds);
@@ -68,7 +84,7 @@ public class AwinFeedRefreshJob : BackgroundService
 
                 try
                 {
-                    await IngestSingleFeedSafelyAsync(feed, ct);
+                    await IngestSingleFeedSafelyAsync(feed, catalogCache, listingCache, ct);
                 }
                 finally
                 {
@@ -145,6 +161,8 @@ public class AwinFeedRefreshJob : BackgroundService
 
     private async Task IngestSingleFeedSafelyAsync(
         AwinFeedEntry feed,
+        Dictionary<(string Category, string Label), ProductCatalog> catalogCache,
+        Dictionary<string, ProductListing> listingCache,
         CancellationToken ct)
     {
         try
@@ -186,6 +204,8 @@ public class AwinFeedRefreshJob : BackgroundService
                 sourceName: string.IsNullOrWhiteSpace(feed.AdvertiserName)
                     ? $"awin_{feed.AdvertiserId}"
                     : $"awin_{Slug(feed.AdvertiserName)}",
+                catalogCache: catalogCache,
+                listingCache: listingCache,
                 ct: ct
             );
 
