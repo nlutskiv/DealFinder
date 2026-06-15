@@ -196,8 +196,9 @@ public class AwinFeedRefreshJob : BackgroundService
                 return;
             }
 
-            await using var stream = await http.GetStreamAsync(feed.Url, ct);
-            await using var decompressed = WrapIfCompressed(stream, feed.Url);
+            var (stream, finalUrl) = await OpenFeedStreamAsync(http, feed.Url, ct);
+            await using var feedStream = stream;
+            await using var decompressed = WrapIfCompressed(feedStream, finalUrl);
 
             await ingestion.IngestAsync(
                 feedStream: decompressed,
@@ -502,6 +503,59 @@ public class AwinFeedRefreshJob : BackgroundService
             .Replace("-", "")
             .Replace("_", "")
             .ToLowerInvariant();
+    }
+
+    // Awin is migrating to a "new_system": some feed downloads now respond with HTTP 200
+    // and a JSON body { "message": "...", "location": "https://internal.productdata.awin.com/..." }
+    // instead of the file. HttpClient won't follow that (it's not a 3xx), so we detect the
+    // JSON and re-request the real location. Returns the stream and the URL it came from
+    // (needed so WrapIfCompressed can tell whether to gunzip).
+    private async Task<(Stream Stream, string FinalUrl)> OpenFeedStreamAsync(
+        HttpClient http, string url, CancellationToken ct)
+    {
+        var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+        response.EnsureSuccessStatusCode();
+
+        var mediaType = response.Content.Headers.ContentType?.MediaType ?? "";
+        if (mediaType.Contains("json", StringComparison.OrdinalIgnoreCase))
+        {
+            var body = await response.Content.ReadAsStringAsync(ct);
+            response.Dispose();
+
+            var location = TryGetRedirectLocation(body);
+            if (string.IsNullOrWhiteSpace(location) || !IsAllowedFeedUrl(location))
+            {
+                throw new InvalidOperationException(
+                    $"Awin feed download returned a JSON redirect without a usable location for {url}.");
+            }
+
+            _logger.LogInformation("Following Awin feed redirect to {Location}", location);
+
+            var redirected = await http.GetAsync(location, HttpCompletionOption.ResponseHeadersRead, ct);
+            redirected.EnsureSuccessStatusCode();
+            return (await redirected.Content.ReadAsStreamAsync(ct), location);
+        }
+
+        return (await response.Content.ReadAsStreamAsync(ct), url);
+    }
+
+    private static string? TryGetRedirectLocation(string body)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("location", out var loc) &&
+                loc.ValueKind == JsonValueKind.String)
+            {
+                return loc.GetString();
+            }
+        }
+        catch
+        {
+            // Not JSON we recognise.
+        }
+
+        return null;
     }
 
     private static Stream WrapIfCompressed(Stream stream, string url)
