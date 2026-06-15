@@ -63,6 +63,10 @@
   color: #fff;
 }
 
+.hide-risky-toggle {
+  margin-left: auto;
+}
+
 .rankings-loading {
   display: flex;
   align-items: center;

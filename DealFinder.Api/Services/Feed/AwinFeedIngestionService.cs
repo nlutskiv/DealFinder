@@ -141,6 +141,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             Specifications = Field(csv, "specifications"),
 
             SearchPrice = Field(csv, "search_price"),
+            SalePrice = Field(csv, "aw_sale_price"),
             DeliveryCost = Field(csv, "delivery_cost"),
             Currency = Field(csv, "currency"),
 
@@ -236,6 +237,11 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         if (!TryParseDecimal(row.SearchPrice, out var price) || price <= 0)
         {
             return false;
+        }
+
+        if (TryParseDecimal(row.SalePrice, out var salePrice) && salePrice > 0 && salePrice < price)
+        {
+            price = salePrice;
         }
 
         if (!string.IsNullOrWhiteSpace(row.Currency) &&
@@ -1144,6 +1150,7 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
         public string Specifications { get; set; } = "";
 
         public string SearchPrice { get; set; } = "";
+        public string SalePrice { get; set; } = "";
         public string DeliveryCost { get; set; } = "";
         public string Currency { get; set; } = "";
 

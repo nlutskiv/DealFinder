@@ -3,6 +3,7 @@ import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { RankingsService, RankingItem } from '../../services/rankings.service';
+import { retailerTrust } from '../../models/retailer-trust';
 
 const CATEGORY_ORDER = ['gpu', 'cpu', 'motherboard', 'ram', 'storage', 'psu', 'case', 'cooler'];
 
@@ -57,6 +58,7 @@ export class Rankings implements OnInit {
 
   activeCategory = 'gpu';
   minPrice = 0;
+  hideRisky = false;
 
   readonly pricePresets = [
     { label: 'Any', value: 0 },
@@ -115,7 +117,9 @@ export class Rankings implements OnInit {
 
   get visibleItems(): RankingItem[] {
     return this.items.filter(i =>
-      i.category === this.activeCategory && i.minPrice >= this.minPrice
+      i.category === this.activeCategory &&
+      i.minPrice >= this.minPrice &&
+      (!this.hideRisky || retailerTrust(i.topListingMarketplace) !== 'risky')
     );
   }
 

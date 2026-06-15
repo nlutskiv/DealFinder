@@ -44,6 +44,12 @@
             (click)="minPrice = p.value"
           >{{ p.label }}</button>
         </div>
+        <button
+          type="button"
+          class="price-pill hide-risky-toggle"
+          [class.active]="hideRisky"
+          (click)="hideRisky = !hideRisky"
+        >Hide risky sellers</button>
       </div>
 
       <div class="rankings-empty" *ngIf="visibleItems.length === 0">
