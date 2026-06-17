@@ -240,8 +240,15 @@
   }
   .rank-info { flex: 1 1 0; min-width: 0; }
   .rank-price-wrap { flex-shrink: 0; }
-  .rank-btn {
+  /* Buttons drop to their own full-width line, side by side, so they don't
+     squeeze the model text. */
+  .rank-actions {
     flex: 0 0 100%;
+    flex-direction: row;
+    gap: 8px;
+  }
+  .rank-actions .rank-btn {
+    flex: 1 1 0;
     text-align: center;
     padding: 9px 12px;
     font-size: 0.83rem;
