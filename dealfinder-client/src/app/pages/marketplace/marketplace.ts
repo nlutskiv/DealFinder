@@ -5,6 +5,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { ProductResult } from '../../models/product-result';
 import { CatalogOption, ProductCategory } from '../../models/catalog-option';
 import { retailerTrust, TrustLevel } from '../../models/retailer-trust';
+import { amazonSearchLink } from '../../models/amazon-link';
 import { ProductSearchService } from '../../services/product-search.service';
 import { CatalogService } from '../../services/catalog.service';
 import { PriceHistoryService, PricePoint } from '../../services/price-history.service';
@@ -111,6 +112,10 @@ export class Marketplace implements OnInit {
 
   trust(marketplace: string): TrustLevel {
     return retailerTrust(marketplace);
+  }
+
+  amazonLink(): string {
+    return amazonSearchLink(this.selectedOption?.label ?? '');
   }
 
   get selectedCategoryLabel(): string {

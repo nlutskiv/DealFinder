@@ -198,6 +198,18 @@
 
 .rank-btn:hover { opacity: 0.88; }
 
+.rank-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.rank-btn-amazon {
+  background: #ff9900;
+  color: #111;
+}
+
 .rankings-cta-text {
   font-size: 0.9rem;
   color: var(--color-text-muted);

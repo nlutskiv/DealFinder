@@ -80,9 +80,14 @@
             <span class="rank-from">from</span>
           </div>
 
-          <a class="rank-btn" [href]="effectiveUrl(item)" target="_blank" rel="noopener noreferrer sponsored">
-            View at {{ effectiveMarketplace(item) }} →
-          </a>
+          <div class="rank-actions">
+            <a class="rank-btn" [href]="effectiveUrl(item)" target="_blank" rel="noopener noreferrer sponsored">
+              View at {{ effectiveMarketplace(item) }} →
+            </a>
+            <a class="rank-btn rank-btn-amazon" [href]="amazonLink(item)" target="_blank" rel="noopener noreferrer sponsored nofollow">
+              Compare on Amazon →
+            </a>
+          </div>
         </div>
       </div>
 

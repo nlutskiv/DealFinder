@@ -3,6 +3,7 @@ import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 import { RankingsService, RankingItem } from '../../services/rankings.service';
+import { amazonSearchLink } from '../../models/amazon-link';
 
 const CATEGORY_ORDER = ['gpu', 'cpu', 'motherboard', 'ram', 'storage', 'psu', 'case', 'cooler'];
 
@@ -173,6 +174,10 @@ export class Rankings implements OnInit {
 
   productLink(item: RankingItem): string[] {
     return ['/product', String(item.catalogProductId), this.slugify(item.modelLabel)];
+  }
+
+  amazonLink(item: RankingItem): string {
+    return amazonSearchLink(item.modelLabel);
   }
 
   onImageError(event: Event): void {

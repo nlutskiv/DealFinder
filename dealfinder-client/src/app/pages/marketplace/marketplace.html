@@ -124,6 +124,9 @@
       <div class="listings-header-left">
         <h2 class="section-title">{{ selectedOption?.label }}</h2>
         <span class="results-count">{{ sortedResults.length }} {{ listingWord(sortedResults.length) }}</span>
+        <a class="amazon-compare-btn" [href]="amazonLink()" target="_blank" rel="noopener noreferrer sponsored nofollow">
+          Compare on Amazon →
+        </a>
       </div>
 
       <div class="listings-header-right">
