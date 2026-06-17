@@ -240,18 +240,24 @@
   }
   .rank-info { flex: 1 1 0; min-width: 0; }
   .rank-price-wrap { flex-shrink: 0; }
-  /* Buttons drop to their own full-width line, side by side, so they don't
-     squeeze the model text. */
+  /* Seller name is already shown on the "View at …" button below — drop it from the
+     meta line so the BEST VALUE badge always fits on one line. */
+  .rank-meta-seller { display: none; }
+  /* Buttons each take their own full-width line so long retailer names never
+     overflow the card. */
   .rank-actions {
     flex: 0 0 100%;
-    flex-direction: row;
+    flex-direction: column;
     gap: 8px;
   }
   .rank-actions .rank-btn {
-    flex: 1 1 0;
+    width: 100%;
+    box-sizing: border-box;
     text-align: center;
     padding: 9px 12px;
     font-size: 0.83rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .rank-price { font-size: 1rem; }
 }

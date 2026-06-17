@@ -70,7 +70,7 @@
           <div class="rank-info">
             <a class="rank-model rank-model-link" [routerLink]="productLink(item)">{{ item.modelLabel }}</a>
             <p class="rank-meta">
-              {{ item.listingCount }} {{ item.listingCount === 1 ? 'listing' : 'listings' }} · {{ effectiveMarketplace(item) }}
+              {{ item.listingCount }} {{ item.listingCount === 1 ? 'listing' : 'listings' }}<span class="rank-meta-seller"> · {{ effectiveMarketplace(item) }}</span>
               <span class="rank-value-badge" *ngIf="item.valueScore != null">BEST VALUE</span>
             </p>
           </div>
