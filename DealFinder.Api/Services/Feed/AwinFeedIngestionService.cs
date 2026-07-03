@@ -425,10 +425,53 @@ public class AwinFeedIngestionService : IAwinFeedIngestionService
             !ContainsAny(categoryText, ["phone", "camera", "flash", "card", "microsd", "mobile"]))
             return HasRamSignal(titleText) && !ContainsAny(allText, RamRejectWords) ? Ram : null;
 
+        // Laptop Outlet (Awin 111534) uses its own taxonomy — handled in its own method.
+        var laptopOutlet = ClassifyLaptopOutlet(merchantCategory, titleText, allText);
+        if (laptopOutlet is not null) return laptopOutlet;
+
         // No title-signal fallback: if the category path doesn't identify the type,
         // we drop the product rather than guess from the title (which pulls in
         // laptops/mini-PCs whose names contain a CPU/GPU model). Cleaner feed, and
         // it's fine to miss the odd product filed under a generic category.
+        return null;
+    }
+
+    // Laptop Outlet (Awin advertiser 111534) — its own taxonomy. Only the categories
+    // selected in the feed, each guarded by the same signal + reject-word checks.
+    private static string? ClassifyLaptopOutlet(string merchantCategory, string titleText, string allText)
+    {
+        // Gaming > Graphics Cards ; Brands > MSI > MSI graphic cards
+        if (CategoryContains(merchantCategory, "graphics cards") || CategoryContains(merchantCategory, "graphic cards"))
+            return HasGpuModel(titleText) && !ContainsAny(allText, GpuRejectWords) ? Gpu : null;
+
+        // Components > Processors
+        if (CategoryContains(merchantCategory, "processors"))
+            return HasCpuModel(titleText) && !ContainsAny(allText, CpuRejectWords) ? Cpu : null;
+
+        // Components > MotherBoards
+        if (CategoryContains(merchantCategory, "motherboards"))
+            return HasMotherboardSignal(titleText) && !ContainsAny(allText, MotherboardRejectWords) ? Motherboard : null;
+
+        // Components > Ram and Memory (PC RAM, DDR4 RAM)
+        if (CategoryContains(merchantCategory, "ram and memory"))
+            return HasRamSignal(titleText) && !ContainsAny(allText, RamRejectWords) ? Ram : null;
+
+        // Components > Power Supplies
+        if (CategoryContains(merchantCategory, "power supplies"))
+            return HasPsuSignal(titleText) && !ContainsAny(allText, PsuRejectWords) ? Psu : null;
+
+        // Components > Cooling Fans
+        if (CategoryContains(merchantCategory, "cooling fans"))
+            return HasCoolerSignal(titleText) && !ContainsAny(allText, CoolerRejectWords) ? Cooler : null;
+
+        // Components > PC Cases
+        if (CategoryContains(merchantCategory, "pc cases"))
+            return HasCaseSignal(titleText) && !ContainsAny(allText, CaseRejectWords) ? Case : null;
+
+        // Components > Storage > Internal SSDs
+        if (CategoryContains(merchantCategory, "storage", "ssd"))
+            return HasStorageSignal(titleText) && !ContainsAny(allText, StorageRejectWords) ? Storage : null;
+
         return null;
     }
 
