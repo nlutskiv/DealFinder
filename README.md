@@ -1,6 +1,6 @@
 # DealFinder
 
-Price comparison site for PC parts, live at [dealfinder.tech](https://dealfinder.tech).
+Price comparison site for PC parts. It ran publicly at dealfinder.tech and is now offline; everything needed to run it locally is below.
 
 It pulls product feeds from UK retailers through Awin, matches listings to a catalogue of real parts, and ranks them by price and value. It also tracks price history, sends price-drop email alerts, and has a PC builder that puts together a parts list for a given budget.
 
