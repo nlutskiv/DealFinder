@@ -4,6 +4,14 @@ Price comparison site for PC parts. It ran publicly at dealfinder.tech and is no
 
 It pulls product feeds from UK retailers through Awin, matches listings to a catalogue of real parts, and ranks them by price and value. It also tracks price history, sends price-drop email alerts, and has a PC builder that puts together a parts list for a given budget.
 
+The last database snapshot holds 6,345 listings from 5 retailers, grouped into 166 part models.
+
+![Marketplace: models per category with price range and listing count](docs/screenshots/marketplace.jpg)
+
+![One model matched across retailers](docs/screenshots/product.jpg)
+
+![Deals page ranked by category](docs/screenshots/deals.jpg)
+
 ## Stack
 
 - **Backend:** ASP.NET Core (.NET 10), EF Core, PostgreSQL
